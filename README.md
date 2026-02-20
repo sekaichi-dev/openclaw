@@ -35,9 +35,11 @@ npm install
 
 3. Set up environment variables:
 ```bash
-# Create .env.local file
-OPENCLAW_HOME=/path/to/.openclaw
-OPENCLAW_WORKSPACE=/path/to/.openclaw/workspace
+# Copy the example file
+cp .env.example .env.local
+
+# Edit .env.local with your actual credentials
+# Include OpenClaw paths and Japan Villas property credentials
 ```
 
 4. Run the development server:
@@ -55,11 +57,18 @@ The dashboard integrates with OpenClaw by reading configuration and state files 
 
 ### Japan Villas Setup
 
-For the Japan Villas functionality:
+For the Japan Villas functionality to work correctly:
 
-1. Ensure your OpenClaw workspace has the Japan Villas configuration
-2. Configure property-specific settings and guidebook knowledge
-3. Set up Lisa (Villa Concierge) agent with appropriate permissions
+1. **Environment Variables**: Copy `.env.example` to `.env.local` and fill in your actual property credentials:
+   - WiFi passwords for each property
+   - Keybox codes for property access
+   - Beds24 API tokens (when available)
+
+2. **OpenClaw Workspace**: Ensure your OpenClaw workspace has the Japan Villas configuration
+
+3. **Lisa Agent**: Set up Lisa (Villa Concierge) agent with appropriate permissions
+
+**⚠️ Important**: Lisa needs real credentials to help guests. The repository is sanitized for public use, but production deployments must provide actual WiFi passwords and access codes via environment variables.
 
 ### Security Notes
 

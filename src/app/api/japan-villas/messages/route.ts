@@ -13,7 +13,7 @@ const MOCK_MESSAGES = [
     direction: "inbound",
     status: "pending",
     bookingRef: "HMA8XXXXX",
-    suggestedReply: "田中様、お疲れ様です。15:00のアーリーチェックインは可能です。清掃が14:30頃に完了予定ですので、15:00にお越しください。鍵はキーボックス（コードXXXX）からお取りいただけます。ご到着をお待ちしております！",
+    suggestedReply: `田中様、お疲れ様です。15:00のアーリーチェックインは可能です。清掃が14:30頃に完了予定ですので、15:00にお越しください。鍵はキーボックス（コード${process.env.LAKEHOUSE_KEYBOX_CODE || "XXXX"}）からお取りいただけます。ご到着をお待ちしております！`,
   },
   {
     id: "msg-002",
@@ -40,7 +40,7 @@ const MOCK_MESSAGES = [
     direction: "inbound",
     status: "pending",
     bookingRef: "BDC-12345",
-    suggestedReply: "Hi Michael! The WiFi information for your cabin is: Network: \"NojiriLake-1\" Password: \"[REDACTED]\" You'll find this network listed on your device. If you have any trouble connecting, please let me know! Enjoy your stay at The Lake Side INN. 🏞️",
+    suggestedReply: `Hi Michael! The WiFi information for your cabin is: Network: "NojiriLake-1" Password: "${process.env.LAKESIDE_CABIN1_WIFI || "[REDACTED]"}" You'll find this network listed on your device. If you have any trouble connecting, please let me know! Enjoy your stay at The Lake Side INN. 🏞️`,
   },
   {
     id: "msg-004",
