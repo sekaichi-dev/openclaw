@@ -1,36 +1,115 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Mission Control Dashboard
 
-## Getting Started
+A Next.js 15 dashboard for managing OpenClaw AI agent teams, featuring real-time monitoring, Japan Villas guest management, and automated task scheduling.
 
-First, run the development server:
+## 🌟 Features
 
+- **🎭 Virtual Office**: Real-time agent visualization and monitoring
+- **🤖 Agents Overview**: Multi-agent system management (Jennie, Lisa, Rosé)
+- **🏡 Japan Villas**: Guest messaging workflow with AI assistance
+- **⏰ Cron Jobs**: Automated task scheduling and monitoring
+- **📋 Activity Feed**: System activity tracking
+- **💾 Memory Management**: Daily logs and briefings
+- **📱 Responsive Design**: Mobile-friendly interface
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18+ 
+- OpenClaw installation and configuration
+- Access to OpenClaw workspace directory
+
+### Installation
+
+1. Clone the repository:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/sekaichi-dev/openclaw.git
+cd openclaw
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Set up environment variables:
+```bash
+# Create .env.local file
+OPENCLAW_HOME=/path/to/.openclaw
+OPENCLAW_WORKSPACE=/path/to/.openclaw/workspace
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Run the development server:
+```bash
+npm run dev
+```
 
-## Learn More
+5. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-To learn more about Next.js, take a look at the following resources:
+## 🔧 Configuration
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### OpenClaw Integration
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The dashboard integrates with OpenClaw by reading configuration and state files from your OpenClaw installation. Make sure to set the correct paths in your environment variables.
 
-## Deploy on Vercel
+### Japan Villas Setup
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+For the Japan Villas functionality:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Ensure your OpenClaw workspace has the Japan Villas configuration
+2. Configure property-specific settings and guidebook knowledge
+3. Set up Lisa (Villa Concierge) agent with appropriate permissions
+
+### Security Notes
+
+- All sensitive data (WiFi passwords, access codes) has been redacted in this public repository
+- Real property credentials should be configured via environment variables or secure configuration files
+- Never commit actual guest data or property access information
+
+## 📦 Deployment
+
+### Vercel (Recommended)
+
+1. Connect your GitHub repository to Vercel
+2. Set environment variables in Vercel dashboard
+3. Deploy automatically on push
+
+### Manual Deployment
+
+```bash
+npm run build
+npm start
+```
+
+## 🤖 Agent System
+
+The dashboard supports multiple AI agents:
+
+- **Jennie** (Main): Mission control and oversight
+- **Lisa** (Villa Concierge): Guest communication and support  
+- **Rosé** (Coding): Development and technical tasks
+
+## 🏗️ Architecture
+
+- **Frontend**: Next.js 15 with App Router
+- **UI**: Tailwind CSS + shadcn/ui components
+- **State**: Server-side integration with OpenClaw
+- **Deployment**: Vercel with global CDN
+
+## 🔒 Security
+
+This repository has been sanitized for public use:
+
+- Sensitive credentials have been redacted
+- File paths use environment variables
+- No real guest or property data included
+- Production deployments should use secure configuration management
+
+## 📄 License
+
+This project is part of the OpenClaw ecosystem. Please refer to OpenClaw's licensing terms.
+
+## 🤝 Contributing
+
+This is a specialized dashboard for OpenClaw AI agent management. Contributions should align with OpenClaw's development practices and security requirements.
