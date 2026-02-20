@@ -29,7 +29,7 @@ function getModelShortName(model: string): string {
 export async function GET() {
   try {
     // Read config for agent list + defaults
-    const configRaw = await readFile("/Users/sekaichi/.openclaw/openclaw.json", "utf-8");
+    const configRaw = await readFile(`${process.env.OPENCLAW_HOME || "/path/to/.openclaw"}/openclaw.json`, "utf-8");
     const config = JSON.parse(configRaw);
 
     const defaultModel = config.agents?.defaults?.model?.primary || "unknown";

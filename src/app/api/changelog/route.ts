@@ -5,7 +5,7 @@ import path from "path";
 export const dynamic = "force-dynamic";
 
 const CHANGELOG_PATH = path.join(
-  process.env.HOME || "/Users/sekaichi",
+  process.env.HOME || "/home/user",
   ".openclaw",
   "workspace",
   "memory",

@@ -26,8 +26,8 @@ export const PROPERTY_KNOWLEDGE: { [key: string]: PropertyKnowledge } = {
     checkOut: "11:00",
     wifi: {
       networks: [
-        { name: "The Lake House - 2G", password: "nojiriko" },
-        { name: "The Lake House - 5G", password: "nojiriko" }
+        { name: "The Lake House - 2G", password: "[REDACTED]" },
+        { name: "The Lake House - 5G", password: "[REDACTED]" }
       ]
     },
     keyFeatures: [
@@ -41,8 +41,8 @@ export const PROPERTY_KNOWLEDGE: { [key: string]: PropertyKnowledge } = {
     ],
     commonQuestions: {
       wifi: {
-        answer: `The WiFi networks for LAKE HOUSE are:\n\n📶 **Network 1:** The Lake House - 2G\n📶 **Network 2:** The Lake House - 5G\n🔐 **Password:** nojiriko\n\nBoth networks use the same password. Choose the 5G network for faster speeds if your device supports it. You can also scan the WiFi QR code displayed in the property for instant connection!`,
-        answerJP: `野尻湖レイクハウスのWiFi情報：\n\n📶 **ネットワーク1:** The Lake House - 2G\n📶 **ネットワーク2:** The Lake House - 5G\n🔐 **パスワード:** nojiriko\n\n両方のネットワークで同じパスワードをご利用いただけます。お使いのデバイスが対応している場合は、より高速な5Gネットワークをお選びください。物件内に表示されているWiFi QRコードをスキャンすると、すぐに接続できます！`
+        answer: `The WiFi networks for LAKE HOUSE are:\n\n📶 **Network 1:** The Lake House - 2G\n📶 **Network 2:** The Lake House - 5G\n🔐 **Password:** [REDACTED]\n\nBoth networks use the same password. Choose the 5G network for faster speeds if your device supports it. You can also scan the WiFi QR code displayed in the property for instant connection!`,
+        answerJP: `野尻湖レイクハウスのWiFi情報：\n\n📶 **ネットワーク1:** The Lake House - 2G\n📶 **ネットワーク2:** The Lake House - 5G\n🔐 **パスワード:** [REDACTED]\n\n両方のネットワークで同じパスワードをご利用いただけます。お使いのデバイスが対応している場合は、より高速な5Gネットワークをお選びください。物件内に表示されているWiFi QRコードをスキャンすると、すぐに接続できます！`
       },
       checkin: {
         answer: `Check-in at LAKE HOUSE is completely self-service! 🏡\n\n⏰ **Available from:** 15:00 onwards (anytime after 3 PM)\n🔑 **Process:** Use the keybox system - your entry code was provided in your booking confirmation\n📋 **No staff needed** - you can arrive anytime after 15:00\n\n✅ **Checkout:** Simply return the key to the keybox by 11:00 AM\n\nThe self-check-in system gives you complete flexibility with your arrival time!`,
@@ -61,10 +61,10 @@ export const PROPERTY_KNOWLEDGE: { [key: string]: PropertyKnowledge } = {
     checkOut: "11:00", 
     wifi: {
       networks: [
-        { name: "Cabin 1", password: "NojiriLake-1" },
-        { name: "Cabin 2", password: "NomadWagon-2" },
-        { name: "Cabin 3", password: "Lakeside Camper-3" },
-        { name: "Cabin 4", password: "RoamCabin-4" }
+        { name: "Cabin 1", password: "[REDACTED]" },
+        { name: "Cabin 2", password: "[REDACTED]" },
+        { name: "Cabin 3", password: "[REDACTED]" },
+        { name: "Cabin 4", password: "[REDACTED]" }
       ]
     },
     keyFeatures: [
@@ -75,7 +75,7 @@ export const PROPERTY_KNOWLEDGE: { [key: string]: PropertyKnowledge } = {
     ],
     commonQuestions: {
       wifi: {
-        answer: `The Lake Side INN has separate WiFi networks for each cabin:\n\n📶 **Cabin 1:** Network name varies, Password: **NojiriLake-1**\n📶 **Cabin 2:** Network name varies, Password: **NomadWagon-2**\n📶 **Cabin 3:** Network name varies, Password: **Lakeside Camper-3**\n📶 **Cabin 4:** Network name varies, Password: **RoamCabin-4**\n\n🏠 Please check which cabin you're staying in and use the corresponding password. Each cabin also has a WiFi QR code for instant connection!`,
+        answer: `The Lake Side INN has separate WiFi networks for each cabin:\n\n📶 **Cabin 1:** Network name varies, Password: **[REDACTED]**\n📶 **Cabin 2:** Network name varies, Password: **[REDACTED]**\n📶 **Cabin 3:** Network name varies, Password: **[REDACTED]**\n📶 **Cabin 4:** Network name varies, Password: **[REDACTED]**\n\n🏠 Please check which cabin you're staying in and use the corresponding password. Each cabin also has a WiFi QR code for instant connection!`,
         answerJP: `レイクサイドインでは各キャビンごとに異なるWiFiネットワークをご用意しています：\n\n📶 **キャビン1:** パスワード: **NojiriLake-1**\n📶 **キャビン2:** パスワード: **NomadWagon-2**\n📶 **キャビン3:** パスワード: **Lakeside Camper-3**\n📶 **キャビン4:** パスワード: **RoamCabin-4**\n\n🏠 ご宿泊のキャビン番号をご確認の上、対応するパスワードをご利用ください。各キャビンにWiFi QRコードもございます！`
       }
     }
@@ -88,7 +88,7 @@ export const PROPERTY_KNOWLEDGE: { [key: string]: PropertyKnowledge } = {
     checkOut: "10:00",
     wifi: {
       networks: [
-        { name: "mvniseko", password: "mountainv" }
+        { name: "mvniseko", password: "[REDACTED]" }
       ]
     },
     keyFeatures: [

@@ -3,7 +3,7 @@ import { readFile, writeFile, mkdir } from "fs/promises";
 import path from "path";
 
 const SETTINGS_PATH =
-  "/Users/sekaichi/.openclaw/workspace/japan-villas/concierge-settings.json";
+  `${process.env.OPENCLAW_WORKSPACE || "/path/to/.openclaw/workspace"}/japan-villas/concierge-settings.json`;
 
 const DEFAULT_SETTINGS = {
   autoRespond: true,
