@@ -23,8 +23,17 @@ const TIME_FILTERS = [
   { label: "24h", value: "24" },
 ];
 
+const ACTIVITY_TYPES = [
+  { label: "All", value: "all" },
+  { label: "Agent", value: "agent" },
+  { label: "System", value: "system" },
+  { label: "Cron", value: "cron" },
+  { label: "User", value: "session" },
+];
+
 export function ActivityFeedCard({ className }: { className?: string }) {
   const [hours, setHours] = useState("24");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [entries, setEntries] = useState<ActivityEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -43,6 +52,13 @@ export function ActivityFeedCard({ className }: { className?: string }) {
     }
   }, [hours]);
 
+  // Filter entries based on selected type
+  const filteredEntries = entries.filter(entry => {
+    if (typeFilter === "all") return true;
+    const entryType = entry.type || entry.sessionType || "system";
+    return entryType.toLowerCase().includes(typeFilter);
+  });
+
   useEffect(() => {
     fetchActivity();
     const interval = setInterval(fetchActivity, 30000);
@@ -58,7 +74,7 @@ export function ActivityFeedCard({ className }: { className?: string }) {
             <CardTitle className="text-sm font-medium">Activity Feed</CardTitle>
             {!loading && (
               <Badge variant="secondary" className="ml-1">
-                {entries.length}
+                {filteredEntries.length}
               </Badge>
             )}
           </div>
@@ -78,20 +94,38 @@ export function ActivityFeedCard({ className }: { className?: string }) {
         </div>
       </CardHeader>
       <CardContent>
+        {/* Type Filter Row */}
+        <div className="flex gap-1 mb-4 pb-3 border-b border-border">
+          {ACTIVITY_TYPES.map(({ label, value }) => (
+            <Button
+              key={value}
+              variant={typeFilter === value ? "secondary" : "ghost"}
+              size="sm"
+              className="h-6 text-xs px-2"
+              onClick={() => setTypeFilter(value)}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
+        
         {loading ? (
           <div className="space-y-2">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="h-12 animate-pulse rounded bg-muted" />
             ))}
           </div>
-        ) : entries.length === 0 ? (
+        ) : filteredEntries.length === 0 ? (
           <div className="py-8 text-center text-sm text-muted-foreground">
-            No activity in the last {hours}h.
+            {entries.length === 0 
+              ? `No activity in the last ${hours}h.`
+              : `No ${typeFilter === "all" ? "" : typeFilter + " "}activity in the last ${hours}h.`
+            }
           </div>
         ) : (
-          <ScrollArea className="h-[340px] pr-4">
+          <ScrollArea className="h-[300px] pr-4">
             <div className="space-y-1">
-              {entries.map((entry, idx) => {
+              {filteredEntries.map((entry, idx) => {
                 const isSuccess =
                   entry.status === "success" || entry.status === "ok";
                 const isError =
