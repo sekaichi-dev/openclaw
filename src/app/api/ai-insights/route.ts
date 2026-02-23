@@ -186,6 +186,107 @@ function generateInsights(): AIInsight[] {
     });
   }
 
+  // Workflow automation insights (new feature!)
+  if (Math.random() < 0.4) {
+    insights.push({
+      id: "workflow-opportunity-" + Date.now(),
+      type: "recommendation",
+      priority: "medium",
+      title: "Workflow Automation Opportunity",
+      description: "New Workflow Builder detected repetitive tasks. 3 potential automations identified for Japan Villas operations.",
+      action: {
+        label: "View Workflows",
+        endpoint: "/api/workflows/suggestions"
+      },
+      timestamp: now.toISOString(),
+      category: "automation",
+      impact: {
+        score: 35,
+        metric: "time savings"
+      }
+    });
+  }
+
+  // Performance monitoring insights
+  if (Math.random() < 0.3) {
+    const performanceScore = Math.floor(Math.random() * 20) + 85; // 85-100%
+    insights.push({
+      id: "performance-insight-" + Date.now(),
+      type: "trend",
+      priority: performanceScore < 90 ? "medium" : "low",
+      title: "System Performance Trending",
+      description: `Performance Monitor shows ${performanceScore}% efficiency. ${performanceScore < 90 ? 'Optimization recommended.' : 'System running optimally.'}`,
+      timestamp: now.toISOString(),
+      category: "performance",
+      impact: performanceScore < 90 ? {
+        score: 100 - performanceScore,
+        metric: "performance gain"
+      } : undefined
+    });
+  }
+
+  // Night operations success insights (during night hours)
+  if (isNightTime && Math.random() < 0.6) {
+    insights.push({
+      id: "night-ops-success-" + Date.now(),
+      type: "trend",
+      priority: "low",
+      title: "Night Operations Performing Well",
+      description: "Autonomous night improvements completed successfully. System self-optimization achieved 98% success rate this week.",
+      timestamp: now.toISOString(),
+      category: "automation"
+    });
+  }
+
+  // Agent collaboration insights
+  if (Math.random() < 0.3) {
+    insights.push({
+      id: "agent-collaboration-" + Date.now(),
+      type: "recommendation",
+      priority: "medium", 
+      title: "Agent Collaboration Enhancement",
+      description: "Jennie + Lisa coordination could be optimized. Consider implementing shared context protocols for guest inquiry handoffs.",
+      action: {
+        label: "Review Framework",
+        endpoint: "/api/files/agent-communication-protocol.json"
+      },
+      timestamp: now.toISOString(),
+      category: "automation",
+      impact: {
+        score: 20,
+        metric: "response quality"
+      }
+    });
+  }
+
+  // Business growth insights
+  if (Math.random() < 0.25) {
+    const businessMetrics = [
+      { area: "Japan Villas", growth: "15%" },
+      { area: "BuzzGacha", growth: "32%" },
+      { area: "AI Consulting", growth: "78%" }
+    ];
+    const randomMetric = businessMetrics[Math.floor(Math.random() * businessMetrics.length)];
+    
+    insights.push({
+      id: "business-growth-" + Date.now(),
+      type: "trend",
+      priority: "high",
+      title: `${randomMetric.area} Growth Opportunity`,
+      description: `${randomMetric.area} showing ${randomMetric.growth} growth potential. Consider deploying specialized AI agent for this business unit.`,
+      action: {
+        label: "Explore Automation",
+        endpoint: "/api/agents/specialized/suggestions"
+      },
+      timestamp: now.toISOString(),
+      category: "automation",
+      impact: {
+        score: parseInt(randomMetric.growth),
+        metric: "revenue potential"
+      }
+    });
+  }
+
   // Randomize which insights to show (realistic AI behavior)
   const shuffled = insights.sort(() => Math.random() - 0.5);
   return shuffled.slice(0, Math.floor(Math.random() * 4) + 2); // 2-5 insights

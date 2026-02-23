@@ -9,6 +9,8 @@ import { SystemMetricsCard } from "@/components/dashboard/system-metrics-card";
 import { QuickActionsCard } from "@/components/dashboard/quick-actions-card";
 import { AIInsightsCard } from "@/components/dashboard/ai-insights-card";
 import { NightModeBanner } from "@/components/dashboard/night-mode-banner";
+import { WorkflowBuilderCard } from "@/components/dashboard/workflow-builder-card";
+import { PerformanceMonitorCard } from "@/components/dashboard/performance-monitor-card";
 
 export default function DashboardPage() {
   return (
@@ -36,13 +38,19 @@ export default function DashboardPage() {
         <AIInsightsCard />
       </div>
 
-      {/* Third row: System Metrics + Agents overview */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* Third row: System Metrics + Agents overview + Workflow Builder */}
+      <div className="grid gap-6 lg:grid-cols-3">
         <SystemMetricsCard />
         <AgentsOverviewCard />
+        <WorkflowBuilderCard />
       </div>
 
-      {/* Fourth row: Cron jobs (full width for better table display) */}
+      {/* Fourth row: Performance Monitor (standalone for detailed charts) */}
+      <div className="grid gap-6 lg:grid-cols-1">
+        <PerformanceMonitorCard />
+      </div>
+
+      {/* Fifth row: Cron jobs (full width for better table display) */}
       <CronJobsCard />
     </div>
   );
