@@ -11,6 +11,9 @@ import { AIInsightsCard } from "@/components/dashboard/ai-insights-card";
 import { NightModeBanner } from "@/components/dashboard/night-mode-banner";
 import { WorkflowBuilderCard } from "@/components/dashboard/workflow-builder-card";
 import { PerformanceMonitorCard } from "@/components/dashboard/performance-monitor-card";
+import { BusinessIntelligenceCard } from "@/components/dashboard/business-intelligence-card";
+import { AgentNetworkCard } from "@/components/dashboard/agent-network-card";
+import { SmartNotificationsCard } from "@/components/dashboard/smart-notifications-card";
 
 export default function DashboardPage() {
   return (
@@ -26,31 +29,40 @@ export default function DashboardPage() {
       
       <NightModeBanner />
 
+      {/* Smart Notifications - Priority row for autonomous operations */}
+      <SmartNotificationsCard />
+
       {/* Top row: Virtual Office + Quick Actions */}
       <div className="grid gap-6 lg:grid-cols-2">
         <VirtualOffice />
         <QuickActionsCard />
       </div>
 
-      {/* Second row: Activity Feed + AI Insights */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* Second row: Activity Feed + AI Insights + Business Intelligence */}
+      <div className="grid gap-6 lg:grid-cols-3">
         <ActivityFeedCard />
         <AIInsightsCard />
+        <BusinessIntelligenceCard />
       </div>
 
-      {/* Third row: System Metrics + Agents overview + Workflow Builder */}
+      {/* Third row: System Metrics + Agents overview + Agent Network */}
       <div className="grid gap-6 lg:grid-cols-3">
         <SystemMetricsCard />
         <AgentsOverviewCard />
+        <AgentNetworkCard />
+      </div>
+
+      {/* Fourth row: Workflow Builder (standalone for better space) */}
+      <div className="grid gap-6 lg:grid-cols-1">
         <WorkflowBuilderCard />
       </div>
 
-      {/* Fourth row: Performance Monitor (standalone for detailed charts) */}
+      {/* Fifth row: Performance Monitor (standalone for detailed charts) */}
       <div className="grid gap-6 lg:grid-cols-1">
         <PerformanceMonitorCard />
       </div>
 
-      {/* Fifth row: Cron jobs (full width for better table display) */}
+      {/* Sixth row: Cron jobs (full width for better table display) */}
       <CronJobsCard />
     </div>
   );
