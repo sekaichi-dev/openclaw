@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { Home } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Home, RefreshCw, Wifi, WifiOff } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { usePolling } from "@/hooks/use-polling";
 import { MessageList } from "@/components/japan-villas/message-list";
+import { ConversationList } from "@/components/japan-villas/conversation-list";
+import { MessageThread } from "@/components/japan-villas/message-thread";
 import {
   ToneSettings,
   type ConciergeSettings,
@@ -19,12 +21,24 @@ import type { Message } from "@/components/japan-villas/message-card";
 
 export default function JapanVillasPage() {
   const [autoRespond, setAutoRespond] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
 
   const {
     data: messages,
     loading: messagesLoading,
     refetch: refetchMessages,
-  } = usePolling<Message[]>("/api/japan-villas/messages", 15000, []);
+  } = usePolling<Message[]>("/api/japan-villas/messages", 60000, [], {
+    priority: "normal",
+    adaptiveInterval: true
+  });
+
+  // Update last updated timestamp when messages change
+  useEffect(() => {
+    if (messages) {
+      setLastUpdated(new Date());
+    }
+  }, [messages]);
 
   const { data: settings, loading: settingsLoading } =
     usePolling<ConciergeSettings>("/api/japan-villas/settings", 60000);
@@ -90,36 +104,76 @@ export default function JapanVillasPage() {
 
       <Tabs defaultValue="messages">
         <TabsList variant="line">
-          <TabsTrigger value="messages">Messages &amp; Settings</TabsTrigger>
+          <TabsTrigger value="messages">Messages</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
           <TabsTrigger value="properties">Properties</TabsTrigger>
           <TabsTrigger value="simulator">Test Lisa</TabsTrigger>
         </TabsList>
 
         <TabsContent value="messages" className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-2">
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium">Guest Messages</h3>
-                <p className="text-sm text-muted-foreground">Real Airbnb & Booking.com messages only</p>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <h3 className="text-lg font-medium">Guest Conversations</h3>
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                {messagesLoading ? (
+                  <WifiOff className="h-3 w-3 text-yellow-500" />
+                ) : (
+                  <Wifi className="h-3 w-3 text-green-500" />
+                )}
+                <span>Live from Beds24</span>
               </div>
-              <MessageList
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => refetchMessages()}
+                disabled={messagesLoading}
+                className="flex items-center gap-1 px-2 py-1 text-xs bg-secondary rounded-md hover:bg-secondary/80 disabled:opacity-50"
+              >
+                <RefreshCw className={`h-3 w-3 ${messagesLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p>Auto-refresh: 1m</p>
+                {lastUpdated && (
+                  <p>Updated: {lastUpdated.toLocaleTimeString()}</p>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-12 gap-4 h-[calc(100vh-300px)]">
+            {/* Left: Conversation List */}
+            <div className="col-span-4 border rounded-lg">
+              <ConversationList
                 messages={messages || []}
                 loading={messagesLoading}
                 properties={settings?.properties || []}
+                selectedConversation={selectedConversation}
+                onSelectConversation={setSelectedConversation}
+              />
+            </div>
+            
+            {/* Right: Message Thread */}
+            <div className="col-span-8 border rounded-lg">
+              <MessageThread
+                messages={messages || []}
+                selectedConversation={selectedConversation}
                 onReply={handleReply}
                 onLetLisaHandle={handleLetLisaHandle}
                 onAIAssist={handleAIAssist}
               />
             </div>
-            
-            <div>
-              <h3 className="text-lg font-medium mb-4">Tone &amp; Settings</h3>
-              <ToneSettings
-                settings={settings}
-                loading={settingsLoading}
-                onSave={handleSaveSettings}
-              />
-            </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="settings">
+          <div className="max-w-2xl">
+            <h3 className="text-lg font-medium mb-4">Concierge Settings</h3>
+            <ToneSettings
+              settings={settings}
+              loading={settingsLoading}
+              onSave={handleSaveSettings}
+            />
           </div>
         </TabsContent>
 

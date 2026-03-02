@@ -65,11 +65,11 @@ export function usePolling<T>(
         break;
     }
     
-    return Math.max(5000, Math.floor(intervalMs * multiplier)); // Min 5 seconds
+    return Math.max(30000, Math.floor(intervalMs * multiplier)); // Min 30 seconds
   }, [intervalMs, adaptiveInterval, priority]);
 
   // Enhanced fetch with retry logic
-  const fetchData = useCallback(async (isRetry = false) => {
+  const fetchData = useCallback(async (isRetry = false, isBackground = false) => {
     if (!enabled) return;
     
     try {
@@ -79,7 +79,8 @@ export function usePolling<T>(
         return;
       }
       
-      if (!isRetry) setLoading(true);
+      // Only show loading for initial fetch or manual refetch, not background polling
+      if (!isRetry && !isBackground && !data) setLoading(true);
       
       const res = await fetch(url, {
         headers: {
@@ -110,14 +111,14 @@ export function usePolling<T>(
         
         setTimeout(() => {
           if (enabled) {
-            fetchData(true);
+            fetchData(true, isBackground);
           }
         }, backoffDelay);
       }
     } finally {
-      if (!isRetry) setLoading(false);
+      if (!isRetry && !isBackground) setLoading(false);
     }
-  }, [url, enabled, retryAttempts, retryCount]);
+  }, [url, enabled, retryAttempts, retryCount, data]);
 
   // Smart polling setup
   useEffect(() => {
@@ -139,7 +140,7 @@ export function usePolling<T>(
       
       const currentInterval = getAdaptiveInterval();
       intervalRef.current = setInterval(() => {
-        fetchData();
+        fetchData(false, true); // isRetry=false, isBackground=true
         setupNextInterval(); // Recalculate interval for next cycle
       }, currentInterval);
     };
@@ -161,7 +162,7 @@ export function usePolling<T>(
         // Fetch immediately when tab becomes visible
         const timeSinceLastFetch = Date.now() - lastFetchTime.current;
         if (timeSinceLastFetch > getAdaptiveInterval() * 0.5) {
-          fetchData();
+          fetchData(false, false); // Not a retry, not background (user initiated)
         }
       }
     };
@@ -175,9 +176,9 @@ export function usePolling<T>(
     loading,
     error,
     retryAttempts,
-    refetch: () => fetchData(false),
+    refetch: () => fetchData(false, false), // Manual refetch, show loading
     nextInterval: getAdaptiveInterval(),
     pause: () => enabled && setError("Polling paused"),
-    resume: () => enabled && fetchData()
+    resume: () => enabled && fetchData(false, false)
   };
 }

@@ -14,6 +14,7 @@ import { PerformanceMonitorCard } from "@/components/dashboard/performance-monit
 import { BusinessIntelligenceCard } from "@/components/dashboard/business-intelligence-card";
 import { AgentNetworkCard } from "@/components/dashboard/agent-network-card";
 import { SmartNotificationsCard } from "@/components/dashboard/smart-notifications-card";
+import { AgentCommunicationPanel } from "@/components/dashboard/agent-communication-panel";
 
 export default function DashboardPage() {
   return (
@@ -52,17 +53,22 @@ export default function DashboardPage() {
         <AgentNetworkCard />
       </div>
 
-      {/* Fourth row: Workflow Builder (standalone for better space) */}
+      {/* Fourth row: Agent Communication Panel (full width for message tracking) */}
+      <div className="grid gap-6 lg:grid-cols-1">
+        <AgentCommunicationPanel />
+      </div>
+
+      {/* Fifth row: Workflow Builder (standalone for better space) */}
       <div className="grid gap-6 lg:grid-cols-1">
         <WorkflowBuilderCard />
       </div>
 
-      {/* Fifth row: Performance Monitor (standalone for detailed charts) */}
+      {/* Sixth row: Performance Monitor (standalone for detailed charts) */}
       <div className="grid gap-6 lg:grid-cols-1">
         <PerformanceMonitorCard />
       </div>
 
-      {/* Sixth row: Cron jobs (full width for better table display) */}
+      {/* Seventh row: Cron jobs (full width for better table display) */}
       <CronJobsCard />
     </div>
   );
