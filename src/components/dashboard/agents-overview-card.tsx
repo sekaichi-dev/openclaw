@@ -3,8 +3,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Bot, TrendingDown, Activity, Clock } from "lucide-react";
+import { Bot, TrendingDown, Activity, Clock, AlertTriangle, CheckCircle2, Info, X } from "lucide-react";
 import { usePolling } from "@/hooks/use-polling";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 interface AgentStatus {
   agent: string;
@@ -39,22 +41,46 @@ interface AgentsData {
   } | null;
 }
 
+interface SmartNotification {
+  id: string;
+  type: "alert" | "success" | "info" | "warning";
+  priority: "low" | "medium" | "high" | "critical";
+  title: string;
+  message: string;
+  actionable: boolean;
+}
+
+interface NotificationsData {
+  notifications: SmartNotification[];
+  unreadCount: number;
+}
+
+const NOTIF_ICON = {
+  alert:   { Icon: AlertTriangle, cls: "text-rose-500/80" },
+  warning: { Icon: AlertTriangle, cls: "text-amber-500/80" },
+  success: { Icon: CheckCircle2,  cls: "text-emerald-500/80" },
+  info:    { Icon: Info,          cls: "text-primary/70" },
+};
+
 export function AgentsOverviewCard({ className }: { className?: string }) {
   const { data: statusData, loading: statusLoading } = usePolling<AgentStatus>("/api/status", 10000);
   const { data: agentsData, loading: agentsLoading } = usePolling<AgentsData>("/api/agents", 30000);
+  const { data: notifsData } = usePolling<NotificationsData>("/api/smart-notifications", 30000);
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
   const loading = statusLoading || agentsLoading;
   
   const tierColor: Record<string, string> = {
-    Frontier: "bg-red-500/20 text-red-400 border-red-500/30",
-    Standard: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-    Fast: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+    Frontier: "bg-rose-500/10 text-rose-400/80 border-rose-500/20",
+    Standard: "bg-primary/10 text-primary/80 border-primary/20",
+    Fast:     "bg-emerald-500/10 text-emerald-500/80 border-emerald-500/20",
   };
 
   const agentColor: Record<string, string> = {
-    Jennie: "text-emerald-400",
-    Lisa: "text-violet-400",
-    Rosé: "text-pink-400",
+    Jennie: "text-foreground",
+    Lisa:   "text-foreground",
+    Rosé:   "text-foreground",
+    Jisoo:  "text-foreground",
   };
 
   if (loading || !agentsData || !agentsData.agents || !Array.isArray(agentsData.agents)) {
@@ -80,22 +106,64 @@ export function AgentsOverviewCard({ className }: { className?: string }) {
 
   return (
     <Card className={className}>
-      <CardHeader className="flex flex-row items-center justify-between pb-3">
+      <CardHeader className="flex flex-row items-center justify-between px-4 pt-3 pb-2">
         <div className="flex items-center gap-2">
           <Bot className="h-4 w-4 text-muted-foreground" />
           <CardTitle className="text-sm font-medium">Agents Overview</CardTitle>
         </div>
         <div className="flex items-center gap-2">
           {agentsData.costSummary && agentsData.costSummary.savingsPercent > 0 && (
-            <Badge variant="outline" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-xs">
+            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-xs">
               <TrendingDown className="mr-1 h-3 w-3" />
               {agentsData.costSummary.savingsPercent}% saved
             </Badge>
           )}
         </div>
       </CardHeader>
-      <CardContent className="pt-0">
-        <div className="grid grid-cols-3 gap-4">
+      <CardContent className="px-4 pt-0 pb-4">
+
+        {/* Notifications — top of card */}
+        {(() => {
+          const notifications = (notifsData?.notifications ?? []).filter((n) => !dismissed.has(n.id));
+          if (!notifsData) return null;
+          return (
+            <div className="mb-4">
+              {notifications.length === 0 ? (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground/40">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  All clear
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {notifications.map((n) => {
+                    const { Icon, cls } = NOTIF_ICON[n.type] ?? NOTIF_ICON.info;
+                    return (
+                      <div key={n.id} className={cn(
+                        "flex items-start gap-2.5 rounded-md px-2.5 py-2 text-xs group bg-muted/30",
+                        n.priority === "critical" && "bg-rose-500/5 border border-rose-500/20",
+                      )}>
+                        <Icon className={cn("h-3.5 w-3.5 mt-0.5 shrink-0", cls)} />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium leading-tight">{n.title}</p>
+                          <p className="text-muted-foreground/70 leading-tight">{n.message}</p>
+                        </div>
+                        <button
+                          onClick={() => setDismissed((p) => new Set([...p, n.id]))}
+                          className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/50 hover:text-muted-foreground"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <Separator className="mt-3" />
+            </div>
+          );
+        })()}
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {agentsData.agents.map((agent) => {
             // Determine agent status
             let agentStatus = "idle";
@@ -104,20 +172,24 @@ export function AgentsOverviewCard({ className }: { className?: string }) {
             
             if (agent.name === "Jennie" && isMainActive) {
               agentStatus = "active";
-              statusColor = "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
-              statusDot = "bg-emerald-400 animate-pulse";
+              statusColor = "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20";
+              statusDot = "bg-emerald-500 animate-pulse";
             } else if (agent.name === "Lisa") {
               agentStatus = "standby";
-              statusColor = "bg-violet-500/20 text-violet-400 border-violet-500/30";
-              statusDot = "bg-violet-400";
+              statusColor = "bg-primary/10 text-primary/80 border-primary/20";
+              statusDot = "bg-primary/60";
+            } else if (agent.name === "Jisoo") {
+              agentStatus = "standby";
+              statusColor = "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20";
+              statusDot = "bg-cyan-500/60";
             } else if (agent.name === "Rosé" && roseActive) {
               agentStatus = "active";
-              statusColor = "bg-pink-500/20 text-pink-400 border-pink-500/30";
-              statusDot = "bg-pink-400 animate-pulse";
+              statusColor = "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20";
+              statusDot = "bg-rose-500 animate-pulse";
             } else if (agent.name === "Rosé") {
               agentStatus = "available";
-              statusColor = "bg-pink-500/10 text-pink-300 border-pink-500/20";
-              statusDot = "bg-pink-300";
+              statusColor = "bg-muted text-muted-foreground border-border";
+              statusDot = "bg-muted-foreground/50";
             }
 
             const isMainAgent = agent.name === "Jennie";
@@ -179,7 +251,7 @@ export function AgentsOverviewCard({ className }: { className?: string }) {
         {/* Cost summary */}
         {agentsData.costSummary && (
           <>
-            <Separator className="my-4" />
+            <Separator className="my-3" />
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">Est. monthly cost</span>
               <div className="text-right">
@@ -189,6 +261,8 @@ export function AgentsOverviewCard({ className }: { className?: string }) {
             </div>
           </>
         )}
+
+
       </CardContent>
     </Card>
   );

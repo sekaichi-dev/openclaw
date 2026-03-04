@@ -109,10 +109,16 @@ export function AgentNetworkCard() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const { width, height } = canvas.getBoundingClientRect();
-    canvas.width = width * devicePixelRatio;
-    canvas.height = height * devicePixelRatio;
-    ctx.scale(devicePixelRatio, devicePixelRatio);
+    // Guard against canvas not being rendered yet
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+
+    const { width, height } = rect;
+    const dpr = window.devicePixelRatio || 1;
+    
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.scale(dpr, dpr);
 
     ctx.clearRect(0, 0, width, height);
 

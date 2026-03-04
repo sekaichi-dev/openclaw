@@ -50,7 +50,7 @@ interface Workflow {
   created: string;
 }
 
-const WORKFLOW_TEMPLATES = [
+const WORKFLOW_TEMPLATES: { id: string; name: string; description: string; steps: WorkflowStep[] }[] = [
   {
     id: "guest-response-flow",
     name: "Guest Response Automation",

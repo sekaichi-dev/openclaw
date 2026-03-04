@@ -42,7 +42,7 @@ interface PerformanceData {
 interface PerformanceAlert {
   id: string;
   type: "warning" | "critical" | "info";
-  metric: "cpu" | "memory" | "network" | "disk" | "response";
+  metric: "cpu" | "memory" | "network" | "disk" | "responseTime";
   message: string;
   value: number;
   threshold: number;
@@ -202,7 +202,7 @@ function generatePerformanceData(previousData?: PerformanceData): PerformanceDat
     alerts.push({
       id: `response-${now}`,
       type: responseTime > 1000 ? "critical" : "warning",
-      metric: "response",
+      metric: "responseTime",
       message: `Slow response times detected`,
       value: responseTime,
       threshold: 500,

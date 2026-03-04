@@ -3,7 +3,7 @@ import { readFile } from "fs/promises";
 import { join } from "path";
 
 // Property mapping for Beds24 property IDs
-const PROPERTY_MAPPING = {
+const PROPERTY_MAPPING: Record<number, string> = {
   265980: "LAKE HOUSE 野尻湖",
   265981: "MOUNTAIN VILLA ニセコ", 
   281224: "The Lake Side INN"
@@ -29,23 +29,56 @@ interface Beds24Booking {
   guestName?: string;
   guestSurname?: string;
   referer?: string;
+  refererEditable?: string;
+  channel?: string;
+  apiSource?: string;
 }
 
+function detectPlatform(booking: Beds24Booking): string {
+  // Use the most reliable fields first, all case-insensitive
+  const sources = [
+    booking.channel,
+    booking.apiSource,
+    booking.referer,
+    booking.refererEditable,
+  ].map((s) => (s ?? "").toLowerCase());
+
+  if (sources.some((s) => s.includes("airbnb")))       return "Airbnb";
+  if (sources.some((s) => s.includes("booking")))      return "Booking.com";
+  if (sources.some((s) => s.includes("expedia")))      return "Expedia";
+  if (sources.some((s) => s.includes("vrbo")))         return "VRBO";
+  if (sources.some((s) => s.includes("agoda")))        return "Agoda";
+  if (sources.some((s) => s.includes("hotels")))       return "Hotels.com";
+  if (sources.some((s) => s.includes("tripadvisor")))  return "TripAdvisor";
+  if (sources.some((s) => s.includes("direct") || s.includes("website") || s === "")) return "Direct";
+  // Return the raw apiSource/referer capitalised if nothing matched
+  const raw = booking.apiSource || booking.referer || booking.channel || "";
+  return raw.charAt(0).toUpperCase() + raw.slice(1) || "Direct";
+}
+
+const LISA_VILLAS_PATH = '/Users/sekaichi/.openclaw/agents/lisa/japan-villas';
+
 async function getConciergeState() {
+  // Try Lisa's agent path first, fall back to workspace
+  const paths = [
+    join(LISA_VILLAS_PATH, 'concierge-state.json'),
+    join(process.env.OPENCLAW_WORKSPACE || '/Users/sekaichi/.openclaw/workspace', 'japan-villas', 'concierge-state.json'),
+  ];
+  for (const p of paths) {
+    try {
+      const state = JSON.parse(await readFile(p, 'utf-8'));
+      return { lastCheckedMessageId: state.lastCheckedMessageId || 0, processedMessageIds: state.processedMessageIds || [] };
+    } catch {}
+  }
+  return { lastCheckedMessageId: 0, processedMessageIds: [] };
+}
+
+async function getDraftedReplies(): Promise<Record<string, { draft: string; guestName?: string; property?: string; createdAt?: string }>> {
   try {
-    const statePath = join(process.env.OPENCLAW_WORKSPACE || '/Users/sekaichi/.openclaw/workspace', 'japan-villas', 'concierge-state.json');
-    const stateContent = await readFile(statePath, 'utf-8');
-    const state = JSON.parse(stateContent);
-    return {
-      lastCheckedMessageId: state.lastCheckedMessageId || 0,
-      processedMessageIds: state.processedMessageIds || []
-    };
-  } catch (error) {
-    console.warn('Could not read concierge state:', error);
-    return {
-      lastCheckedMessageId: 0,
-      processedMessageIds: []
-    };
+    const raw = await readFile(join(LISA_VILLAS_PATH, 'drafted-replies.json'), 'utf-8');
+    return JSON.parse(raw);
+  } catch {
+    return {};
   }
 }
 
@@ -53,12 +86,13 @@ async function fetchBeds24Messages(): Promise<any[]> {
   try {
     const token = process.env.BEDS24_API_TOKEN;
     if (!token || token === 'your_beds24_token_here') {
-      console.warn('Beds24 API token not configured, returning mock data');
-      return getMockMessages();
+      console.warn('Beds24 API token not configured');
+      return [];
     }
 
-    // Get concierge state to know which messages are processed
+    // Get concierge state and Lisa's drafted replies
     const conciergeState = await getConciergeState();
+    const draftedReplies = await getDraftedReplies();
 
     // Fetch messages
     const messagesResponse = await fetch('https://api.beds24.com/v2/bookings/messages?limit=200', {
@@ -87,64 +121,56 @@ async function fetchBeds24Messages(): Promise<any[]> {
     // Include both guest and host messages for full conversation history
     const allMessages = messages;
 
-    // Get booking details for each message to get guest names and property info
-    const enrichedMessages = await Promise.all(
-      allMessages.map(async (message) => {
-        try {
-          const bookingResponse = await fetch(`https://api.beds24.com/v2/bookings/${message.bookingId}`, {
-            headers: { 'token': token }
-          });
-          
-          if (bookingResponse.ok) {
-            const booking: Beds24Booking = await bookingResponse.json();
-            const propertyId = message.propertyId || booking.propertyId || booking.propId;
-            const propertyName = PROPERTY_MAPPING[propertyId] || `Property ${propertyId}`;
-            const platform = booking.referer?.includes('airbnb') ? 'Airbnb' : 
-                           booking.referer?.includes('booking') ? 'Booking.com' : 
-                           'Direct';
+    // Batch-fetch all unique bookings in ONE request to avoid rate limits
+    const uniqueBookingIds = [...new Set(allMessages.map((m) => m.bookingId))];
+    const bookingMap: Record<number, Beds24Booking> = {};
 
-            // Determine if message is new or processed
-            const isProcessed = conciergeState.processedMessageIds.includes(message.id);
-            const isNew = message.id > conciergeState.lastCheckedMessageId;
-
-            return {
-              id: `beds24-${message.id}`,
-              guestName: booking.guestName || booking.guestFirstName || 'Guest',
-              property: propertyName,
-              platform,
-              message: message.message,
-              timestamp: message.time,
-              direction: message.source === 'guest' ? 'inbound' : 'outbound',
-              status: message.source === 'guest' ? (isProcessed ? 'replied' : 'pending') : 'replied',
-              bookingRef: `${booking.bookingId}`,
-              suggestedReply: message.source === 'guest' ? `Thank you for your message. We'll get back to you shortly!` : undefined,
-              isNew: message.source === 'guest' && isNew && !isProcessed
-            };
-          }
-        } catch (error) {
-          console.warn('Failed to fetch booking details:', error);
+    try {
+      const bookingResponse = await fetch(
+        `https://api.beds24.com/v2/bookings?ids=${uniqueBookingIds.join(',')}`,
+        { headers: { token } }
+      );
+      if (bookingResponse.ok) {
+        const bookingData = await bookingResponse.json();
+        const bookings: Beds24Booking[] = Array.isArray(bookingData)
+          ? bookingData
+          : (bookingData?.data ?? []);
+        for (const b of bookings) {
+          const bid = (b as any).id ?? (b as any).bookingId;
+          if (bid) bookingMap[bid] = b;
         }
+      }
+    } catch (err) {
+      console.warn('Batch booking fetch failed:', err);
+    }
 
-        // Fallback if booking details failed
-        const isProcessed = conciergeState.processedMessageIds.includes(message.id);
-        const isNew = message.id > conciergeState.lastCheckedMessageId;
-        const propertyName = PROPERTY_MAPPING[message.propertyId] || `Property ${message.propertyId}`;
-        
-        return {
-          id: `beds24-${message.id}`,
-          guestName: 'Guest',
-          property: propertyName,
-          platform: 'Beds24',
-          message: message.message,
-          timestamp: message.time,
-          direction: message.source === 'guest' ? 'inbound' : 'outbound',
-          status: message.source === 'guest' ? (isProcessed ? 'replied' : 'pending') : 'replied',
-          bookingRef: `${message.bookingId}`,
-          suggestedReply: message.source === 'guest' ? `Thank you for your message. We'll get back to you shortly!` : undefined,
-          isNew: message.source === 'guest' && isNew && !isProcessed
-        };
-      })
-    );
+    const enrichedMessages = allMessages.map((message) => {
+      const booking = bookingMap[message.bookingId];
+      const propertyId = (message.propertyId || booking?.propertyId || (booking as any)?.propId) as number;
+      const propertyName = PROPERTY_MAPPING[propertyId] || `Property ${propertyId}`;
+      const platform = booking ? detectPlatform(booking) : 'Unknown';
+      const isProcessed = conciergeState.processedMessageIds.includes(message.id);
+      const isNew = message.id > conciergeState.lastCheckedMessageId;
+
+      const rawName = booking
+        ? (booking.guestName || `${booking.guestFirstName ?? ''} ${booking.guestSurname ?? ''}`.trim() || null)
+        : null;
+      const guestName = rawName || 'Guest';
+
+      return {
+        id: `beds24-${message.id}`,
+        guestName,
+        property: propertyName,
+        platform,
+        message: message.message,
+        timestamp: message.time,
+        direction: message.source === 'guest' ? 'inbound' : 'outbound',
+        status: message.source === 'guest' ? (isProcessed ? 'replied' : 'pending') : 'replied',
+        bookingRef: `${message.bookingId}`,
+        suggestedReply: message.source === 'guest' ? (draftedReplies[String(message.id)]?.draft ?? undefined) : undefined,
+        isNew: message.source === 'guest' && isNew && !isProcessed,
+      };
+    });
 
     // Sort by timestamp, newest first
     return enrichedMessages.sort((a, b) => 
@@ -153,7 +179,7 @@ async function fetchBeds24Messages(): Promise<any[]> {
 
   } catch (error) {
     console.error('Error fetching Beds24 messages:', error);
-    return getMockMessages();
+    return [];
   }
 }
 
@@ -196,6 +222,9 @@ function getMockMessages() {
       status: "pending",
       bookingRef: "HMA8YYYYY",
       suggestedReply: "Here's the Google Maps link: https://maps.google.com/... Safe travels!",
+    },
+    {
+      id: "msg-002-grocery",
       guestName: "Sarah Johnson",
       property: "MOUNTAIN VILLA ニセコ",
       platform: "Airbnb",
@@ -222,8 +251,20 @@ function getMockMessages() {
 }
 
 export async function GET() {
-  const messages = await fetchBeds24Messages();
-  return NextResponse.json(messages);
+  const [messages, draftedReplies] = await Promise.all([
+    fetchBeds24Messages(),
+    getDraftedReplies(),
+  ]);
+
+  // Attach real Lisa drafts to mock messages too (overrides hardcoded suggestedReply
+  // when Lisa has drafted something for that message ID)
+  const enriched = messages.map((m: any) => {
+    const rawId = m.id?.toString().replace('beds24-', '');
+    const draft = draftedReplies[rawId]?.draft;
+    return draft ? { ...m, suggestedReply: draft } : m;
+  });
+
+  return NextResponse.json(enriched);
 }
 
 export async function POST(request: Request) {

@@ -4,6 +4,7 @@ import { usePolling } from "@/hooks/use-polling";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
+import { PageHeader } from "@/components/page-header";
 
 interface Human {
   name: string;
@@ -65,10 +66,7 @@ export default function TeamPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Org Chart</h2>
-          <p className="text-muted-foreground">Sekaichi, Inc. team</p>
-        </div>
+        <PageHeader title="Org Chart" subtitle="Sekaichi, Inc. team" />
         <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <div key={i} className="h-40 animate-pulse rounded-lg bg-muted" />
@@ -102,12 +100,7 @@ export default function TeamPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Org Chart</h2>
-        <p className="text-muted-foreground">
-          Sekaichi, Inc. — humans & AI agents
-        </p>
-      </div>
+      <PageHeader title="Org Chart" subtitle="Sekaichi, Inc. — humans & AI agents" />
 
       <div className="space-y-2">
         {/* Layer 1: CEO */}

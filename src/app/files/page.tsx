@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeader } from "@/components/page-header";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -140,12 +141,7 @@ export default function FilesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Files</h2>
-        <p className="text-muted-foreground">
-          Browse the ~/.openclaw/ directory.
-        </p>
-      </div>
+      <PageHeader title="Files" subtitle="Browse the ~/.openclaw/ directory." />
 
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Button

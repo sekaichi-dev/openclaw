@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeader } from "@/components/page-header";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -19,12 +20,8 @@ export default function ChangelogPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Changelog</h2>
-        <p className="text-muted-foreground">
-          Nightly improvements made by Jennie to Mission Control.
-        </p>
-      </div>
+      <PageHeader title="Changelog" subtitle="Dashboard improvements and agent updates." />
+
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">

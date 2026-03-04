@@ -18,6 +18,7 @@ import {
 } from "@/components/japan-villas/lisa-status";
 import { LisaSimulator } from "@/components/japan-villas/lisa-simulator";
 import type { Message } from "@/components/japan-villas/message-card";
+import { PageHeader } from "@/components/page-header";
 
 export default function JapanVillasPage() {
   const [autoRespond, setAutoRespond] = useState(true);
@@ -85,22 +86,11 @@ export default function JapanVillasPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-            <Home className="h-6 w-6" />
-            Japan Villas
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Guest messaging &amp; concierge management
-          </p>
-        </div>
-        <LisaStatus
-          status={lisaStatus}
-          autoRespond={autoRespond}
-          onToggleAutoRespond={setAutoRespond}
-        />
-      </div>
+      <PageHeader
+        title={<h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight"><Home className="h-6 w-6" />Japan Villas</h2>}
+        subtitle="Guest messaging & concierge management"
+        actions={<LisaStatus status={lisaStatus} autoRespond={autoRespond} onToggleAutoRespond={setAutoRespond} />}
+      />
 
       <Tabs defaultValue="messages">
         <TabsList variant="line">
@@ -141,9 +131,9 @@ export default function JapanVillasPage() {
             </div>
           </div>
           
-          <div className="grid grid-cols-12 gap-4 h-[calc(100vh-300px)]">
+          <div className="grid grid-cols-12 gap-4" style={{ height: "calc(100vh - 280px)" }}>
             {/* Left: Conversation List */}
-            <div className="col-span-4 border rounded-lg">
+            <div className="col-span-4 border rounded-lg overflow-hidden flex flex-col">
               <ConversationList
                 messages={messages || []}
                 loading={messagesLoading}
@@ -152,9 +142,9 @@ export default function JapanVillasPage() {
                 onSelectConversation={setSelectedConversation}
               />
             </div>
-            
+
             {/* Right: Message Thread */}
-            <div className="col-span-8 border rounded-lg">
+            <div className="col-span-8 border rounded-lg overflow-hidden flex flex-col">
               <MessageThread
                 messages={messages || []}
                 selectedConversation={selectedConversation}

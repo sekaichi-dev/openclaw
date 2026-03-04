@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Activity, CheckCircle2, XCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Activity, CheckCircle2, XCircle, Search, RotateCcw, Filter } from "lucide-react";
 
 interface ActivityEntry {
   id?: string;
@@ -34,8 +35,10 @@ const ACTIVITY_TYPES = [
 export function ActivityFeedCard({ className }: { className?: string }) {
   const [hours, setHours] = useState("24");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [entries, setEntries] = useState<ActivityEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(true);
 
   const fetchActivity = useCallback(async () => {
     setLoading(true);
@@ -52,62 +55,115 @@ export function ActivityFeedCard({ className }: { className?: string }) {
     }
   }, [hours]);
 
-  // Filter entries based on selected type
-  const filteredEntries = entries.filter(entry => {
-    if (typeFilter === "all") return true;
-    const entryType = entry.type || entry.sessionType || "system";
-    return entryType.toLowerCase().includes(typeFilter);
-  });
+  // Filter entries based on selected type and search query
+  const filteredEntries = useMemo(() => {
+    return entries.filter(entry => {
+      // Type filter
+      if (typeFilter !== "all") {
+        const entryType = entry.type || entry.sessionType || "system";
+        if (!entryType.toLowerCase().includes(typeFilter)) return false;
+      }
+      
+      // Search filter
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        const description = entry.description.toLowerCase();
+        const entryType = (entry.type || entry.sessionType || "").toLowerCase();
+        return description.includes(query) || entryType.includes(query);
+      }
+      
+      return true;
+    });
+  }, [entries, typeFilter, searchQuery]);
 
   useEffect(() => {
     fetchActivity();
-    const interval = setInterval(fetchActivity, 30000);
-    return () => clearInterval(interval);
-  }, [fetchActivity]);
+    if (autoRefresh) {
+      const interval = setInterval(fetchActivity, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [fetchActivity, autoRefresh]);
 
   return (
     <Card className={className}>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Activity className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-sm font-medium">Activity Feed</CardTitle>
-            {!loading && (
-              <Badge variant="secondary" className="ml-1">
-                {filteredEntries.length}
-              </Badge>
-            )}
-          </div>
-          <div className="flex gap-1">
-            {TIME_FILTERS.map(({ label, value }) => (
+      <CardHeader className="px-4 pt-3 pb-2">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Activity Feed</CardTitle>
+              {!loading && (
+                <Badge variant="secondary" className="ml-1">
+                  {filteredEntries.length}
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-1">
               <Button
-                key={value}
-                variant={hours === value ? "secondary" : "ghost"}
+                variant="ghost"
                 size="sm"
-                className="h-7 text-xs"
-                onClick={() => setHours(value)}
+                className="h-7 px-2"
+                onClick={() => setAutoRefresh(!autoRefresh)}
+                title={autoRefresh ? "Disable auto-refresh" : "Enable auto-refresh"}
               >
-                {label}
+                <RotateCcw className={`h-3 w-3 ${autoRefresh ? "text-emerald-500 animate-spin" : "text-muted-foreground"}`} />
               </Button>
-            ))}
+              {TIME_FILTERS.map(({ label, value }) => (
+                <Button
+                  key={value}
+                  variant={hours === value ? "secondary" : "ghost"}
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setHours(value)}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+          </div>
+          
+          {/* Search bar */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search activity..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-8 pl-8 text-xs"
+              />
+            </div>
+            <div className="flex items-center gap-1">
+              <Filter className="h-3 w-3 text-muted-foreground" />
+              {ACTIVITY_TYPES.slice(1).map(({ label, value }) => {
+                const isActive = typeFilter === value;
+                const count = entries.filter(entry => {
+                  const entryType = entry.type || entry.sessionType || "system";
+                  return entryType.toLowerCase().includes(value);
+                }).length;
+                
+                return (
+                  <Button
+                    key={value}
+                    variant={isActive ? "secondary" : "ghost"}
+                    size="sm"
+                    className="h-6 text-xs px-1.5"
+                    onClick={() => setTypeFilter(isActive ? "all" : value)}
+                  >
+                    {label}
+                    {count > 0 && (
+                      <Badge variant="outline" className="ml-1 h-3.5 px-1 text-[9px]">
+                        {count}
+                      </Badge>
+                    )}
+                  </Button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        {/* Type Filter Row */}
-        <div className="flex gap-1 mb-4 pb-3 border-b border-border">
-          {ACTIVITY_TYPES.map(({ label, value }) => (
-            <Button
-              key={value}
-              variant={typeFilter === value ? "secondary" : "ghost"}
-              size="sm"
-              className="h-6 text-xs px-2"
-              onClick={() => setTypeFilter(value)}
-            >
-              {label}
-            </Button>
-          ))}
-        </div>
+      <CardContent className="px-4 pt-0 pb-4">
         
         {loading ? (
           <div className="space-y-2">
@@ -116,11 +172,29 @@ export function ActivityFeedCard({ className }: { className?: string }) {
             ))}
           </div>
         ) : filteredEntries.length === 0 ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">
-            {entries.length === 0 
-              ? `No activity in the last ${hours}h.`
-              : `No ${typeFilter === "all" ? "" : typeFilter + " "}activity in the last ${hours}h.`
-            }
+          <div className="py-8 text-center space-y-2">
+            <Activity className="h-8 w-8 text-muted-foreground/50 mx-auto" />
+            <div className="text-sm text-muted-foreground">
+              {entries.length === 0 
+                ? `No activity in the last ${hours}h`
+                : searchQuery.trim()
+                  ? `No results for "${searchQuery}"`
+                  : `No ${typeFilter} activity in the last ${hours}h`
+              }
+            </div>
+            {(searchQuery.trim() || typeFilter !== "all") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => {
+                  setSearchQuery("");
+                  setTypeFilter("all");
+                }}
+              >
+                Clear filters
+              </Button>
+            )}
           </div>
         ) : (
           <ScrollArea className="h-[300px] pr-4">

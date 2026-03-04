@@ -1,267 +1,232 @@
 "use client";
 
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
 import { 
-  Zap,
+  Zap, 
+  MessageSquare, 
+  RefreshCw, 
+  Download,
   Calendar,
-  Mail,
-  MessageSquare,
-  Bot,
-  RefreshCw,
-  BarChart3,
-  Settings,
-  Cloud,
-  CheckCircle2,
+  GitBranch,
+  AlertCircle,
+  Coffee,
   Clock,
-  Loader2
+  ExternalLink
 } from "lucide-react";
+import { useState, useCallback } from "react";
+import { usePolling } from "@/hooks/use-polling";
 
 interface QuickAction {
   id: string;
-  name: string;
-  description: string;
-  icon: any;
+  label: string;
+  icon: React.ElementType;
   color: string;
-  category: "communication" | "monitoring" | "automation" | "system";
-  endpoint?: string;
-  requiresConfirm?: boolean;
-  dangerous?: boolean;
+  description: string;
+  action: () => void;
+  disabled?: boolean;
+  badge?: string;
+  external?: boolean;
 }
 
-const QUICK_ACTIONS: QuickAction[] = [
-  {
-    id: "morning-brief",
-    name: "Morning Brief",
-    description: "Generate and send morning briefing",
-    icon: BarChart3,
-    color: "text-blue-400",
-    category: "communication",
-    endpoint: "/api/actions/morning-brief"
-  },
-  {
-    id: "check-inbox",
-    name: "Check Inbox", 
-    description: "Review new emails and notifications",
-    icon: Mail,
-    color: "text-emerald-400",
-    category: "monitoring",
-    endpoint: "/api/actions/inbox"
-  },
-  {
-    id: "team-status",
-    name: "Team Status",
-    description: "Get status of all agents and systems",
-    icon: Bot,
-    color: "text-violet-400", 
-    category: "monitoring",
-    endpoint: "/api/actions/team-status"
-  },
-  {
-    id: "lisa-health",
-    name: "Lisa Health",
-    description: "Check villa concierge system status",
-    icon: MessageSquare,
-    color: "text-pink-400",
-    category: "monitoring",
-    endpoint: "/api/actions/lisa-health"
-  },
-  {
-    id: "weather",
-    name: "Weather Update",
-    description: "Get current weather and forecast",
-    icon: Cloud,
-    color: "text-cyan-400",
-    category: "monitoring",
-    endpoint: "/api/actions/weather"
-  },
-  {
-    id: "calendar",
-    name: "Today's Calendar",
-    description: "Review today's schedule and events",
-    icon: Calendar,
-    color: "text-orange-400",
-    category: "communication",
-    endpoint: "/api/actions/calendar"
-  },
-  {
-    id: "system-optimize",
-    name: "System Optimize",
-    description: "Run system optimization routines",
-    icon: RefreshCw,
-    color: "text-yellow-400",
-    category: "system",
-    requiresConfirm: true
-  },
-  {
-    id: "backup-code",
-    name: "Backup Code", 
-    description: "Trigger immediate code backup to GitHub",
-    icon: Settings,
-    color: "text-gray-400",
-    category: "system",
-    requiresConfirm: true
-  }
-];
+interface AgentStatus {
+  agent: string;
+  status: string;
+  activeSessions: number;
+  roseActive?: boolean;
+}
 
-export function QuickActionsCard({ className }: { className?: string }) {
-  const [executingActions, setExecutingActions] = useState<Set<string>>(new Set());
-  const [recentlyCompleted, setRecentlyCompleted] = useState<Set<string>>(new Set());
-  const { toast } = useToast();
+export function QuickActionsCard() {
+  const { data: statusData } = usePolling<AgentStatus>("/api/status", 5000);
+  const [loading, setLoading] = useState<string | null>(null);
 
-  const executeAction = async (action: QuickAction) => {
-    if (action.requiresConfirm) {
-      if (!confirm(`Are you sure you want to ${action.name.toLowerCase()}?`)) {
-        return;
-      }
-    }
-
-    setExecutingActions(prev => new Set(prev.add(action.id)));
-
+  const handleAction = useCallback(async (actionId: string, actionFn: () => void) => {
+    setLoading(actionId);
     try {
-      let response;
-      if (action.endpoint) {
-        response = await fetch(action.endpoint, { 
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ source: 'quick-actions' })
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          toast({
-            title: "Action Completed",
-            description: `${action.name}: ${result.message || 'Success'}`,
-            variant: "default"
-          });
-        } else {
-          throw new Error(`HTTP ${response.status}`);
-        }
-      } else {
-        // Simulate action for actions without endpoints
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        toast({
-          title: "Action Completed", 
-          description: `${action.name} executed successfully`,
-          variant: "default"
-        });
-      }
-
-      // Mark as recently completed
-      setRecentlyCompleted(prev => new Set(prev.add(action.id)));
-      setTimeout(() => {
-        setRecentlyCompleted(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(action.id);
-          return newSet;
-        });
-      }, 3000);
-
-    } catch (error) {
-      console.error(`Failed to execute ${action.name}:`, error);
-      toast({
-        title: "Action Failed",
-        description: `${action.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: "destructive"
-      });
+      await actionFn();
     } finally {
-      setExecutingActions(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(action.id);
-        return newSet;
-      });
+      // Simulate action completion
+      setTimeout(() => setLoading(null), 1000);
     }
-  };
+  }, []);
 
-  const categories = Array.from(new Set(QUICK_ACTIONS.map(a => a.category)));
+  const quickActions: QuickAction[] = [
+    {
+      id: "check-messages", 
+      label: "Check Messages",
+      icon: MessageSquare,
+      color: "text-blue-500",
+      description: "Review unread notifications & messages",
+      action: () => {
+        // This would integrate with actual messaging systems
+        console.log("Checking messages...");
+        window.open("/activity", "_blank");
+      },
+      badge: "3",
+      external: true,
+    },
+    {
+      id: "refresh-agents",
+      label: "Refresh Status",
+      icon: RefreshCw,
+      color: "text-emerald-500", 
+      description: "Update all agent statuses",
+      action: () => {
+        // This would trigger a status refresh
+        console.log("Refreshing agent statuses...");
+        window.location.reload();
+      },
+    },
+    {
+      id: "export-logs",
+      label: "Export Logs", 
+      icon: Download,
+      color: "text-purple-500",
+      description: "Download activity logs for analysis",
+      action: () => {
+        // This would export current logs
+        console.log("Exporting logs...");
+        // Simulate file download
+        const link = document.createElement('a');
+        link.href = "data:text/plain,Activity logs exported at " + new Date().toISOString();
+        link.download = "mission-control-logs.txt";
+        link.click();
+      },
+    },
+    {
+      id: "schedule-task",
+      label: "Schedule Task",
+      icon: Calendar, 
+      color: "text-amber-500",
+      description: "Create a new scheduled task",
+      action: () => {
+        window.open("/tasks", "_blank");
+      },
+      external: true,
+    },
+    {
+      id: "check-deployments",
+      label: "Deployments",
+      icon: GitBranch,
+      color: "text-cyan-500", 
+      description: "View recent deployments & updates",
+      action: () => {
+        window.open("/changelog", "_blank");
+      },
+      external: true,
+    },
+    {
+      id: "system-health",
+      label: "Health Check",
+      icon: AlertCircle,
+      color: statusData?.status === "active" ? "text-emerald-500" : "text-amber-500",
+      description: "Run system diagnostics",
+      action: () => {
+        console.log("Running health check...");
+        // This would trigger actual health check
+        alert("System status: " + (statusData?.status === "active" ? "Healthy ✅" : "Standby ⚠️"));
+      },
+    },
+    {
+      id: "coffee-break",
+      label: "Coffee Break", 
+      icon: Coffee,
+      color: "text-amber-600",
+      description: "15min break timer",
+      action: () => {
+        console.log("Starting coffee break timer...");
+        const endTime = new Date(Date.now() + 15 * 60000);
+        alert(`Coffee break started! ☕\nBack at ${endTime.toLocaleTimeString()}`);
+      },
+    },
+    {
+      id: "pomodoro",
+      label: "Focus Session",
+      icon: Clock,
+      color: "text-rose-500",
+      description: "Start 25min focus timer", 
+      action: () => {
+        console.log("Starting pomodoro timer...");
+        const endTime = new Date(Date.now() + 25 * 60000);
+        alert(`Focus session started! 🍅\nBreak at ${endTime.toLocaleTimeString()}`);
+      },
+    },
+  ];
 
   return (
-    <Card className={className}>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Zap className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-sm font-medium">Quick Actions</CardTitle>
-            <Badge variant="outline" className="bg-blue-500/20 text-blue-400 border-blue-500/30">
-              {QUICK_ACTIONS.length}
-            </Badge>
-          </div>
-          <div className="flex items-center gap-1">
-            {executingActions.size > 0 && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                <span>{executingActions.size} running</span>
-              </div>
-            )}
-          </div>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between px-4 pt-3 pb-2">
+        <div className="flex items-center gap-2">
+          <Zap className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-sm font-medium">Quick Actions</CardTitle>
         </div>
+        <Badge variant="outline" className="text-xs bg-primary/5 text-primary border-primary/20">
+          {quickActions.length} actions
+        </Badge>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {categories.map(category => {
-            const categoryActions = QUICK_ACTIONS.filter(a => a.category === category);
+      <CardContent className="px-4 pt-0 pb-4">
+        <div className="grid grid-cols-2 gap-2">
+          {quickActions.map((action) => {
+            const Icon = action.icon;
+            const isLoading = loading === action.id;
             
             return (
-              <div key={category} className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    {category}
-                  </span>
-                  <div className="flex-1 h-px bg-border" />
+              <Button
+                key={action.id}
+                variant="ghost"
+                size="sm"
+                className="h-auto flex-col items-start gap-1 p-3 relative"
+                onClick={() => handleAction(action.id, action.action)}
+                disabled={action.disabled || isLoading}
+                title={action.description}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <Icon className={`h-4 w-4 ${action.color} ${isLoading ? 'animate-spin' : ''}`} />
+                  <div className="flex items-center gap-1">
+                    {action.badge && (
+                      <Badge variant="secondary" className="h-4 text-[10px] px-1 bg-rose-500/15 text-rose-600 dark:text-rose-400">
+                        {action.badge}
+                      </Badge>
+                    )}
+                    {action.external && (
+                      <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                    )}
+                  </div>
                 </div>
-                
-                <div className="grid grid-cols-2 gap-2">
-                  {categoryActions.map(action => {
-                    const Icon = action.icon;
-                    const isExecuting = executingActions.has(action.id);
-                    const isCompleted = recentlyCompleted.has(action.id);
-                    
-                    return (
-                      <Button
-                        key={action.id}
-                        variant="outline"
-                        size="sm"
-                        disabled={isExecuting}
-                        onClick={() => executeAction(action)}
-                        className={`h-auto p-3 text-left transition-all ${
-                          isCompleted ? 'border-emerald-500/50 bg-emerald-500/10' : ''
-                        } ${action.dangerous ? 'hover:border-red-500/50 hover:bg-red-500/10' : ''}`}
-                      >
-                        <div className="flex items-start gap-2 w-full">
-                          <div className="flex items-center gap-1">
-                            {isExecuting ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-400" />
-                            ) : isCompleted ? (
-                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-                            ) : (
-                              <Icon className={`h-3.5 w-3.5 ${action.color}`} />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-xs font-medium truncate">
-                              {action.name}
-                            </div>
-                            <div className="text-[10px] text-muted-foreground line-clamp-2">
-                              {action.description}
-                            </div>
-                          </div>
-                        </div>
-                      </Button>
-                    );
-                  })}
+                <div className="w-full text-left">
+                  <div className="text-xs font-medium truncate">{action.label}</div>
+                  <div className="text-[10px] text-muted-foreground truncate">
+                    {action.description}
+                  </div>
                 </div>
-              </div>
+                {isLoading && (
+                  <div className="absolute inset-0 bg-background/50 rounded flex items-center justify-center">
+                    <div className="text-xs text-muted-foreground">Processing...</div>
+                  </div>
+                )}
+              </Button>
             );
           })}
         </div>
-        
-        {/* Last executed timestamp */}
-        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground mt-4 pt-3 border-t border-border">
-          <Clock className="h-3 w-3" />
-          <span>Quick actions ready • Click to execute</span>
+
+        {/* Quick stats */}
+        <div className="mt-4 pt-3 border-t border-border/50">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Active Sessions</span>
+            <span className="font-mono text-foreground">
+              {statusData?.activeSessions || 0}
+            </span>
+          </div>
+          {statusData?.roseActive && (
+            <div className="mt-1 flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">Coding Agent</span>
+              <Badge variant="outline" className="h-4 text-[10px] px-1.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20">
+                <div className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-pulse mr-1" />
+                Active
+              </Badge>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

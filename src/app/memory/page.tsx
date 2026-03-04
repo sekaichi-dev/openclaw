@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeader } from "@/components/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DailyMemoryTab } from "@/components/memory/daily-memory-tab";
 import { SessionHistoryTab } from "@/components/memory/session-history-tab";
@@ -8,14 +9,7 @@ import { MorningBriefsTab } from "@/components/memory/morning-briefs-tab";
 export default function MemoryPage() {
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">
-          Memory & History
-        </h2>
-        <p className="text-muted-foreground">
-          Browse daily memory logs, session history, and morning briefs.
-        </p>
-      </div>
+      <PageHeader title="Memory & History" subtitle="Browse daily memory logs, session history, and morning briefs." />
 
       <Tabs defaultValue="memory" className="space-y-4">
         <TabsList>

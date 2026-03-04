@@ -34,7 +34,7 @@ interface AgentNetworkData {
 
 function generateAgentMessages(): AgentMessage[] {
   const now = Date.now();
-  const agents = ['jennie', 'lisa', 'rose'];
+  const agents = ['jennie', 'lisa', 'jisoo', 'rose'];
   const messageTypes: AgentMessage['type'][] = ['task_delegation', 'status_update', 'coordination', 'escalation', 'heartbeat'];
   const messages: AgentMessage[] = [];
 
@@ -125,7 +125,7 @@ function generateAgentNetworkData(): AgentNetworkData {
     {
       id: "lisa", 
       name: "Lisa",
-      status: (Math.random() > 0.2 ? "active" : "idle") as const,
+      status: (Math.random() > 0.2 ? "active" : "idle") as "active" | "idle",
       role: "Villa Concierge",
       currentTask: "Guest Message Monitoring",
       messagesReceived: Math.floor(8 + Math.random() * 15),
@@ -134,9 +134,20 @@ function generateAgentNetworkData(): AgentNetworkData {
       load: isBusinessHours ? Math.floor(35 + Math.random() * 45) : Math.floor(15 + Math.random() * 25)
     },
     {
+      id: "jisoo",
+      name: "Jisoo",
+      status: (isBusinessHours ? "active" : "idle") as "active" | "idle",
+      role: "Briefing Agent",
+      currentTask: "Daily Briefing Prep",
+      messagesReceived: Math.floor(3 + Math.random() * 8),
+      messagesSent: Math.floor(4 + Math.random() * 10),
+      collaborationScore: Math.round(80 + Math.random() * 12),
+      load: isBusinessHours ? Math.floor(20 + Math.random() * 30) : Math.floor(5 + Math.random() * 15)
+    },
+    {
       id: "rose",
       name: "Rosé", 
-      status: (Math.random() > 0.3 ? "active" : "busy") as const,
+      status: (Math.random() > 0.3 ? "active" : "busy") as "active" | "busy",
       role: "Code Specialist",
       currentTask: Math.random() > 0.5 ? "Tech Debt Analysis" : "Performance Optimization",
       messagesReceived: Math.floor(5 + Math.random() * 12),
@@ -206,6 +217,17 @@ export async function GET() {
           messagesSent: 18,
           collaborationScore: 88,
           load: 40
+        },
+        {
+          id: "jisoo",
+          name: "Jisoo",
+          status: "idle",
+          role: "Briefing Agent",
+          currentTask: "Daily Briefing Prep",
+          messagesReceived: 5,
+          messagesSent: 6,
+          collaborationScore: 82,
+          load: 15
         },
         {
           id: "rose",

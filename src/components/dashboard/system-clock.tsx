@@ -43,42 +43,29 @@ export function SystemClock() {
   const isActive = data?.status === "active";
 
   return (
-    <div className="flex items-center justify-between rounded-lg border border-border bg-card/50 px-4 py-2.5 mb-6">
-      {/* Left: Clock */}
-      <div className="flex items-center gap-3">
-        <Clock className="h-4 w-4 text-muted-foreground" />
-        <div className="flex items-baseline gap-2">
-          <span className="text-xl font-mono font-bold tracking-wider tabular-nums">
-            {timeStr}
-          </span>
-          <span className="text-xs text-muted-foreground">JST</span>
-          <span className="text-xs text-muted-foreground ml-1">• {dateStr}</span>
-        </div>
-      </div>
+    <div className="flex items-center gap-3 rounded-lg border border-border bg-card/50 px-4 py-2.5">
+      {/* Clock */}
+      <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+      <span className="text-base font-mono font-bold tracking-wider tabular-nums">
+        {timeStr}
+      </span>
+      <span className="text-xs text-muted-foreground">JST</span>
 
-      {/* Right: Status indicators */}
-      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-        <div className="flex items-center gap-1.5">
-          {isConnected ? (
-            <Wifi className="h-3.5 w-3.5 text-emerald-400" />
-          ) : (
-            <WifiOff className="h-3.5 w-3.5 text-red-400" />
-          )}
-          <span>{isConnected ? "Connected" : "Disconnected"}</span>
-        </div>
+      <div className="h-3 w-px bg-border" />
 
+      {/* Status indicators - hidden on small screens */}
+      <div className="hidden sm:flex items-center gap-3 text-xs text-muted-foreground">
+        {isConnected ? (
+          <Wifi className="h-3.5 w-3.5 text-emerald-400" />
+        ) : (
+          <WifiOff className="h-3.5 w-3.5 text-red-400" />
+        )}
         <div className="h-3 w-px bg-border" />
-
-        <div className="flex items-center gap-1.5">
-          <Zap className={`h-3.5 w-3.5 ${isActive ? "text-emerald-400" : "text-amber-400"}`} />
-          <span>{isActive ? "Processing" : "Idle"}</span>
-        </div>
-
+        <Zap className={`h-3.5 w-3.5 ${isActive ? "text-emerald-400" : "text-amber-400"}`} />
         <div className="h-3 w-px bg-border" />
-
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           <Server className="h-3.5 w-3.5" />
-          <span>{data?.activeSessions ?? 0} sessions</span>
+          <span>{data?.activeSessions ?? 0}</span>
         </div>
       </div>
     </div>

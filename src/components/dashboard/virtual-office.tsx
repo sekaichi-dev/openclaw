@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback } from "react";
+import { useTheme } from "next-themes";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Building2 } from "lucide-react";
@@ -49,6 +50,15 @@ const AGENTS_DEF: AgentDef[] = [
     deskIdx: 1,
   },
   {
+    name: "Jisoo",
+    role: "Briefing Agent",
+    activeColor: "#67e8f9",
+    idleColor: "#22d3ee",
+    glowActive: "rgba(103, 232, 249, 0.25)",
+    glowIdle: "rgba(34, 211, 238, 0.15)",
+    deskIdx: 2,
+  },
+  {
     name: "Rosé",
     role: "Coding Agent",
     activeColor: "#f472b6",
@@ -68,7 +78,7 @@ const OFFICE = {
     // Executive desks
     { type: "desk" as const, x: 300, y: 120, w: 80, h: 50, label: "Jennie" },
     { type: "desk" as const, x: 300, y: 200, w: 80, h: 50, label: "Lisa" },
-    { type: "desk" as const, x: 140, y: 120, w: 80, h: 50, label: "" },
+    { type: "desk" as const, x: 140, y: 120, w: 80, h: 50, label: "Jisoo" },
     { type: "desk" as const, x: 140, y: 200, w: 80, h: 50, label: "" },
     
     // Coding bullpen (left side)
@@ -111,6 +121,8 @@ function getDeskSeatPos(deskIdx: number): Position {
 
 export function VirtualOffice() {
   const { data } = usePolling<AgentStatus>("/api/status", 5000);
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme !== "light";
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const animFrame = useRef<number>(0);
@@ -119,9 +131,11 @@ export function VirtualOffice() {
   // Agent states
   const agents = useRef<AgentState[]>(
     AGENTS_DEF.map((def, i) => {
-      // Rosé starts in the bullpen, others in general positions
+      // Rosé starts in the bullpen, Jisoo at her desk, others in general positions
       const startPos = def.name === "Rosé" ? 
-        { x: 57, y: 85 } : 
+        { x: 57, y: 85 } :
+        def.name === "Jisoo" ?
+        { x: 180, y: 182 } :
         { x: 150 + i * 120, y: 200 };
       
       return {
@@ -278,12 +292,21 @@ export function VirtualOffice() {
     canvas.style.height = `${displayH}px`;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
+    // Theme-aware colors — indigo-slate palette
+    const floor       = isDark ? "#14132a" : "#f2f1fa";
+    const floorGrid   = isDark ? "#1a1930" : "#e4e2f4";
+    const walls       = isDark ? "#2e2c52" : "#b8b4d8";
+    const doorBg      = isDark ? "#211f3d" : "#d4d0ec";
+    const doorHandle  = isDark ? "#3d3a62" : "#9e99c4";
+    const windowFrame = isDark ? "#2a3a6a" : "#5a6aaa";
+    const windowGlass = isDark ? "rgba(110,130,255,0.06)" : "rgba(110,130,255,0.10)";
+
     // Floor
-    ctx.fillStyle = "#1a1a2e";
+    ctx.fillStyle = floor;
     ctx.fillRect(0, 0, w, h);
 
     // Floor grid
-    ctx.strokeStyle = "#1f1f3a";
+    ctx.strokeStyle = floorGrid;
     ctx.lineWidth = 0.5;
     for (let x = 0; x < w; x += 20) {
       ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
@@ -293,34 +316,44 @@ export function VirtualOffice() {
     }
 
     // Walls
-    ctx.strokeStyle = "#3a3a5c";
+    ctx.strokeStyle = walls;
     ctx.lineWidth = 3;
     ctx.strokeRect(2, 2, w - 4, h - 4);
 
     // Windows
-    ctx.fillStyle = "#1e3a5f";
+    ctx.fillStyle = windowFrame;
     ctx.fillRect(w - 4, 60, 4, 80);
     ctx.fillRect(w - 4, 180, 4, 80);
-    ctx.fillStyle = "rgba(100, 180, 255, 0.05)";
+    ctx.fillStyle = windowGlass;
     ctx.fillRect(w - 40, 60, 40, 80);
     ctx.fillRect(w - 40, 180, 40, 80);
 
     // Door
-    ctx.fillStyle = "#2a2a4a";
+    ctx.fillStyle = doorBg;
     ctx.fillRect(0, 100, 4, 40);
-    ctx.fillStyle = "#4a4a6a";
+    ctx.fillStyle = doorHandle;
     ctx.fillRect(0, 115, 4, 10);
 
-    // Furniture
+    // Furniture — indigo-slate palette
+    const deskFill    = isDark ? "#232140" : "#dddcf2";
+    const deskStroke  = isDark ? "#312e58" : "#c2bfe6";
+    const monitorBg   = isDark ? "#0d0c22" : "#18163a";
+    const chairFill   = isDark ? "#201e3c" : "#cac7e8";
+    const deskLabel   = isDark ? "#5e5a8a" : "#5a56a0";
+    const tableFill   = isDark ? "#201e3c" : "#d0cdf0";
+    const tableStroke = isDark ? "#2e2c52" : "#b0acdc";
+    const bullpenFill  = isDark ? "#181630" : "#eae8f8";
+    const bullpenStroke= isDark ? "#2e2c52" : "#b8b4d8";
+
     OFFICE.furniture.forEach((f) => {
       switch (f.type) {
         case "desk":
-          ctx.fillStyle = "#2d2d4a";
+          ctx.fillStyle = deskFill;
           ctx.fillRect(f.x, f.y, f.w, f.h);
-          ctx.strokeStyle = "#3d3d5a";
+          ctx.strokeStyle = deskStroke;
           ctx.lineWidth = 1;
           ctx.strokeRect(f.x, f.y, f.w, f.h);
-          ctx.fillStyle = "#0f0f2a";
+          ctx.fillStyle = monitorBg;
           ctx.fillRect(f.x + f.w / 2 - 10, f.y + 5, 20, 14);
           // Screen glow based on agent
           const agentDef = AGENTS_DEF.find(a => a.name === f.label);
@@ -329,27 +362,29 @@ export function VirtualOffice() {
           } else if (agentDef && f.label === "Lisa") {
             // Lisa is always "on" (concierge always ready)
             ctx.fillStyle = "rgba(167, 139, 250, 0.3)";
+          } else if (agentDef && f.label === "Jisoo") {
+            ctx.fillStyle = "rgba(103, 232, 249, 0.25)";
           } else {
             ctx.fillStyle = "rgba(100, 100, 180, 0.15)";
           }
           ctx.fillRect(f.x + f.w / 2 - 9, f.y + 6, 18, 12);
           // Chair
-          ctx.fillStyle = "#2a2a48";
+          ctx.fillStyle = chairFill;
           ctx.beginPath();
           ctx.arc(f.x + f.w / 2, f.y + f.h + 12, 8, 0, Math.PI * 2);
           ctx.fill();
           if (f.label) {
-            ctx.fillStyle = "#6a6a9a";
+            ctx.fillStyle = deskLabel;
             ctx.font = "9px monospace";
             ctx.textAlign = "center";
             ctx.fillText(f.label, f.x + f.w / 2, f.y - 4);
           }
           break;
         case "table":
-          ctx.fillStyle = "#2a2a48";
+          ctx.fillStyle = tableFill;
           roundRect(ctx, f.x, f.y, f.w, f.h, 6);
           ctx.fill();
-          ctx.strokeStyle = "#3a3a58";
+          ctx.strokeStyle = tableStroke;
           ctx.lineWidth = 1;
           roundRect(ctx, f.x, f.y, f.w, f.h, 6);
           ctx.stroke();
@@ -407,14 +442,14 @@ export function VirtualOffice() {
           break;
         case "bullpen":
           // Bullpen background
-          ctx.fillStyle = "#1f1f3a";
+          ctx.fillStyle = bullpenFill;
           ctx.fillRect(f.x, f.y, f.w, f.h);
-          ctx.strokeStyle = "#3a3a5c";
+          ctx.strokeStyle = bullpenStroke;
           ctx.lineWidth = 1;
           ctx.strokeRect(f.x, f.y, f.w, f.h);
           // Label
           if (f.label) {
-            ctx.fillStyle = "#6a6a9a";
+            ctx.fillStyle = deskLabel;
             ctx.font = "8px monospace";
             ctx.textAlign = "center";
             ctx.fillText(f.label, f.x + f.w / 2, f.y - 4);
@@ -422,13 +457,13 @@ export function VirtualOffice() {
           break;
         case "workstation":
           // Workstation desk
-          ctx.fillStyle = "#2d2d4a";
+          ctx.fillStyle = deskFill;
           ctx.fillRect(f.x, f.y, f.w, f.h);
-          ctx.strokeStyle = "#3d3d5a";
+          ctx.strokeStyle = deskStroke;
           ctx.lineWidth = 1;
           ctx.strokeRect(f.x, f.y, f.w, f.h);
           // Monitor
-          ctx.fillStyle = "#0f0f2a";
+          ctx.fillStyle = monitorBg;
           ctx.fillRect(f.x + f.w / 2 - 5, f.y + 2, 10, 8);
           // Monitor glow (bright pink when Rosé is coding, dim pink when available)
           if (roseActive) {
@@ -438,7 +473,7 @@ export function VirtualOffice() {
           }
           ctx.fillRect(f.x + f.w / 2 - 4, f.y + 3, 8, 6);
           // Chair
-          ctx.fillStyle = "#2a2a48";
+          ctx.fillStyle = chairFill;
           ctx.beginPath();
           ctx.arc(f.x + f.w / 2, f.y + f.h + 5, 4, 0, Math.PI * 2);
           ctx.fill();
@@ -452,12 +487,14 @@ export function VirtualOffice() {
       if (def.name === "Rosé") {
         // Always visible, but active state changes based on coding work
         drawAgent(ctx, agents.current[i], def, roseActive, 1);
+      } else if (def.name === "Jennie") {
+        drawAgent(ctx, agents.current[i], def, isActive);
       } else {
-        const agentActive = def.name === "Jennie" ? isActive : false;
-        drawAgent(ctx, agents.current[i], def, agentActive);
+        // Lisa, Jisoo — always shown as "on" (standing by)
+        drawAgent(ctx, agents.current[i], def, true);
       }
     });
-  }, [isActive, roseActive, drawAgent]);
+  }, [isActive, roseActive, isDark, drawAgent]);
 
   // Animation loop
   useEffect(() => {
@@ -556,39 +593,36 @@ export function VirtualOffice() {
 
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <div className="flex items-center gap-2">
-          <Building2 className="h-4 w-4 text-muted-foreground" />
-          <CardTitle className="text-sm font-medium">Virtual Office</CardTitle>
-        </div>
-        <div className="flex gap-2">
-          {AGENTS_DEF.map((def) => {
-            const active = def.name === "Jennie" ? isActive : def.name === "Rosé" ? roseActive : false;
-            const badgeClass = active
-              ? def.name === "Rosé"
-                ? "bg-pink-500/20 text-pink-400 border-pink-500/30"
-                : "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-              : def.name === "Lisa"
-              ? "bg-violet-500/20 text-violet-400 border-violet-500/30"
-              : def.name === "Rosé"
-              ? "bg-pink-500/10 text-pink-300 border-pink-500/20"
-              : "bg-amber-500/20 text-amber-400 border-amber-500/30";
-            const dotClass = active
-              ? def.name === "Rosé"
-                ? "bg-pink-400 animate-pulse"
-                : "bg-emerald-400 animate-pulse"
-              : def.name === "Lisa" 
-              ? "bg-violet-400" 
-              : def.name === "Rosé"
-              ? "bg-pink-300"
-              : "bg-amber-400";
-            return (
-              <Badge key={def.name} variant="outline" className={badgeClass}>
-                <span className={`mr-1.5 inline-block h-2 w-2 rounded-full ${dotClass}`} />
-                {def.name}
-              </Badge>
-            );
-          })}
+      <CardHeader className="px-4 pt-3 pb-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 shrink-0">
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Virtual Office</CardTitle>
+          </div>
+          <div className="flex flex-wrap justify-end gap-1.5 min-w-0">
+            {AGENTS_DEF.map((def) => {
+              const badgeClass =
+                def.name === "Jennie"
+                  ? isActive ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" : "bg-muted text-muted-foreground border-border"
+                : def.name === "Lisa"   ? "bg-primary/10 text-primary/80 border-primary/20"
+                : def.name === "Jisoo"  ? "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20"
+                : def.name === "Rosé"
+                  ? roseActive ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20" : "bg-muted text-muted-foreground border-border"
+                : "bg-muted text-muted-foreground border-border";
+              const dotClass =
+                def.name === "Jennie" ? (isActive ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground/40")
+                : def.name === "Lisa"  ? "bg-primary/60"
+                : def.name === "Jisoo" ? "bg-cyan-500/60"
+                : def.name === "Rosé"  ? (roseActive ? "bg-rose-500 animate-pulse" : "bg-muted-foreground/40")
+                : "bg-muted-foreground/40";
+              return (
+                <Badge key={def.name} variant="outline" className={`text-[11px] px-1.5 py-0 ${badgeClass}`}>
+                  <span className={`mr-1 inline-block h-1.5 w-1.5 rounded-full ${dotClass}`} />
+                  {def.name}
+                </Badge>
+              );
+            })}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-2">

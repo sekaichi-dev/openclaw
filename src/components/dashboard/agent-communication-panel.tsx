@@ -67,7 +67,7 @@ export function AgentCommunicationPanel() {
   
   const { data: messages, loading: messagesLoading } = usePolling<AgentMessage[]>(
     "/api/agent-messages", 
-    autoRefresh ? 10000 : null, // 10-second refresh when auto-refresh is on
+    autoRefresh ? 10000 : undefined, // 10-second refresh when auto-refresh is on
     undefined,
     { priority: "high", adaptiveInterval: true }
   );
@@ -76,7 +76,7 @@ export function AgentCommunicationPanel() {
     "/api/communication-stats",
     30000, // 30-second refresh for stats
     undefined,
-    { priority: "medium" }
+    { priority: "normal" }
   );
 
   const filteredMessages = (messages || []).filter(msg => {

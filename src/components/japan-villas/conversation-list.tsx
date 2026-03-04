@@ -58,14 +58,14 @@ export function ConversationList({
     const key = message.bookingRef;
     if (!acc[key]) {
       acc[key] = {
-        bookingRef: message.bookingRef,
-        guestName: message.guestName,
-        property: message.property,
-        platform: message.platform,
-        lastMessage: message.message,
-        lastMessageTime: message.timestamp,
+        bookingRef: message.bookingRef ?? '',
+        guestName: message.guestName ?? 'Guest',
+        property: message.property ?? '',
+        platform: message.platform ?? 'Unknown',
+        lastMessage: message.message ?? '',
+        lastMessageTime: message.timestamp ?? new Date().toISOString(),
         unreadCount: 0,
-        status: message.status as 'pending' | 'replied' | 'escalated',
+        status: (message.status as 'pending' | 'replied' | 'escalated') ?? 'pending',
         messages: [],
       };
     }
@@ -112,11 +112,57 @@ export function ConversationList({
     }
   };
 
+  const getPlatformBadgeColor = (platform: string) => {
+    switch ((platform ?? '').toLowerCase()) {
+      case 'airbnb': 
+      case 'air bnb':
+        return 'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800';
+      case 'booking.com':
+      case 'booking':
+        return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800';
+      case 'expedia':
+        return 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800';
+      case 'vrbo':
+        return 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800';
+      case 'agoda':
+        return 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800';
+      case 'hotels.com':
+      case 'hotels':
+        return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800/30 dark:text-gray-400 dark:border-gray-700';
+    }
+  };
+
+  const getPlatformIcon = (platform: string) => {
+    switch ((platform ?? '').toLowerCase()) {
+      case 'airbnb': 
+      case 'air bnb':
+        return '🏠';
+      case 'booking.com':
+      case 'booking':
+        return '📅';
+      case 'expedia':
+        return '✈️';
+      case 'vrbo':
+        return '🏡';
+      case 'agoda':
+        return '🏨';
+      case 'hotels.com':
+      case 'hotels':
+        return '🏩';
+      default:
+        return '🌐';
+    }
+  };
+
   const getInitials = (name: string) => {
+    if (!name) return '??';
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  const truncateMessage = (message: string, length = 60) => {
+  const truncateMessage = (message: string | undefined, length = 60) => {
+    if (!message) return '';
     if (message.length <= length) return message;
     return message.slice(0, length) + '...';
   };
@@ -181,11 +227,20 @@ export function ConversationList({
                   </Avatar>
                   
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <h4 className="font-medium text-sm truncate">
-                        {conversation.guestName}
-                      </h4>
-                      <div className="flex items-center gap-1">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <h4 className="font-semibold text-sm truncate">
+                          {conversation.guestName}
+                        </h4>
+                        <Badge 
+                          variant="outline" 
+                          className={`text-xs h-7 px-2.5 font-bold border-2 shadow-sm ${getPlatformBadgeColor(conversation.platform)} uppercase`}
+                        >
+                          <span className="mr-1">{getPlatformIcon(conversation.platform)}</span>
+                          {conversation.platform}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
                         {conversation.unreadCount > 0 && (
                           <Badge variant="secondary" className="h-5 min-w-5 text-xs px-1.5">
                             {conversation.unreadCount}
@@ -197,8 +252,10 @@ export function ConversationList({
                       </div>
                     </div>
                     
-                    <div className="text-xs text-muted-foreground mb-1">
-                      {conversation.property} • {conversation.platform}
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs text-muted-foreground">
+                        {conversation.property}
+                      </span>
                     </div>
                     
                     <p className="text-sm text-muted-foreground line-clamp-2">

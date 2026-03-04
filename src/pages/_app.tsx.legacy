@@ -1,0 +1,70 @@
+import "@/styles/globals.css"
+import type { AppProps } from "next/app"
+import { SidebarLayout } from "@/components/layout/sidebar-layout"
+import { Badge, Button, Card, CardHeader, Dropdown, DropdownMenu, DropdownMenuTrigger, Heading, Input, Label, Spinner, Table, TableBody, TableCell, TableHead, TableRow, Textarea } from "@/components/ui"
+import { Link } from "next/link"
+import { Home, Newspaper, Grid, Users, BookOpen } from "lucide-react"
+
+export default function App({ Component, pageProps }: AppProps) {
+  return (
+    <SidebarLayout>
+      <nav className="space-y-4">
+        <div>
+          <Heading level={3}>Navigation</Heading>
+        </div>
+        <ul className="space-y-2">
+          <li>
+            <Link href="/" className="flex items-center gap-2">
+              <Home className="h-6 w-6" />
+              <span>Dashboard</span>
+            </Link>
+          </li>
+          <li>
+            <Link href="/japan-villas" className="flex items-center gap-2">
+              <Newspaper className="h-6 w-6" />
+              <span>Japan Villas</span>
+            </Link>
+          </li>
+          <li>
+            <Link href="/activity" className="flex items-center gap-2">
+              <Grid className="h-6 w-6" />
+              <span>Activity Feed</span>
+            </Link>
+          </li>
+          <li>
+            <Link href="/memory" className="flex items-center gap-2">
+              <BookOpen className="h-6 w-6" />
+              <span>Memory &amp; History</span>
+            </Link>
+          </li>
+          <li>
+            <Link href="/files" className="flex items-center gap-2">
+              <img src="/files.svg" alt="Files" className="h-6 w-6" />
+              <span>Files</span>
+            </Link>
+          </li>
+          <li>
+            <Link href="/tasks" className="flex items-center gap-2">
+              <img src="/tasks.svg" alt="Tasks" className="h-6 w-6" />
+              <span>Tasks</span>
+            </Link>
+          </li>
+          <li>
+            <Link href="/team" className="flex items-center gap-2">
+              <Users className="h-6 w-6" />
+              <span>Org Chart</span>
+            </Link>
+          </li>
+          <li>
+            <Link href="/changelog" className="flex items-center gap-2">
+              <img src="/changelog.svg" alt="Changelog" className="h-6 w-6" />
+              <span>Changelog</span>
+            </Link>
+          </li>
+        </ul>
+      </nav>
+
+      <Component {...pageProps} />
+    </SidebarLayout>
+  )
+}

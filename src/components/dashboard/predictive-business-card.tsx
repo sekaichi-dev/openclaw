@@ -85,7 +85,7 @@ export function PredictiveBusinessCard() {
     60000, // 1-minute refresh for predictions
     undefined,
     { 
-      priority: "medium", 
+      priority: "normal",
       adaptiveInterval: true,
       retryCount: 2 
     }
