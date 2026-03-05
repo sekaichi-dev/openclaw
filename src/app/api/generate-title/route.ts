@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 function generateTitle(description: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const prompt = `Reply with ONLY a short task title (5 words max, no quotes, no punctuation, no markdown): ${description.slice(0, 400).replace(/\n/g, " ")}`;
+    const prompt = `Title: ${description.slice(0, 200).replace(/\n/g, " ")}`;
 
     const child = spawn(
       "/Users/sekaichi/.local/bin/claude",
@@ -22,14 +22,14 @@ function generateTitle(description: string): Promise<string> {
     let out = "";
     let done = false;
 
-    // Manual timeout — spawn doesn't support timeout option
+    // Manual timeout — spawn doesn't support timeout option  
     const timer = setTimeout(() => {
       if (!done) {
         done = true;
         child.kill("SIGTERM");
-        reject(new Error("timeout after 15s"));
+        reject(new Error("timeout after 8s"));
       }
-    }, 15000);
+    }, 8000);
 
     child.stdout.on("data", (d) => (out += d));
     child.on("close", (code) => {
