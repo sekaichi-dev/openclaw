@@ -74,6 +74,8 @@ interface Task {
   tags?: string[];
   createdAt?: string;
   updatedAt?: string;
+  completedAt?: string;
+  carryOver?: boolean;    // if true, task carries over to subsequent days
   // cron-derived fields
   source?: "cron" | "manual";
   cronJobId?: string;
@@ -657,6 +659,29 @@ function TaskDetailPanel({
             </div>
           )}
 
+          {/* Carry-over toggle (manual tasks only) */}
+          {!isCron && (
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <Repeat className="h-3 w-3" />Carry over to next day
+              </label>
+              <button
+                onClick={() => set("carryOver", !(val("carryOver") ?? false))}
+                className={cn(
+                  "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 border-transparent transition-colors focus:outline-none",
+                  (val("carryOver") ?? false)
+                    ? "bg-primary"
+                    : "bg-muted"
+                )}
+              >
+                <span className={cn(
+                  "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform",
+                  (val("carryOver") ?? false) ? "translate-x-4" : "translate-x-0"
+                )} />
+              </button>
+            </div>
+          )}
+
           {/* Progress / Agent conversation */}
           <div className="space-y-1.5">
             <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
@@ -745,6 +770,7 @@ function TaskCardInner({
   const hasError = task.lastStatus === "error";
   const priorityCfg = PRIORITY_CONFIG[task.priority ?? "medium"];
   const isActive = !isCron && task.status === "inProgress" && !!(task as any).activeJobId;
+  const isStuck  = !isCron && task.status === "inProgress" && !(task as any).activeJobId && !(task as any).qaJobId;
   const progress: string = (task as any).progress ?? "";
   const qaStatus: "passed" | "failed" | "reviewing" | null =
     (task as any).qaStatus ??
@@ -763,7 +789,8 @@ function TaskCardInner({
         isDragging && "opacity-50 ring-2 ring-primary/40",
         isActive && "border-primary/50 ring-1 ring-primary/20 bg-primary/5",
         isQAReviewing && "border-amber-500/40 bg-amber-500/5",
-        !isActive && !isQAReviewing && (hasError ? "border-rose-500/30" : isCron ? "border-border/60" : "border-border"),
+        isStuck && "border-amber-500/50 bg-amber-500/5",
+        !isActive && !isQAReviewing && !isStuck && (hasError ? "border-rose-500/30" : isCron ? "border-border/60" : "border-border"),
       )}
     >
       <div className="flex items-start justify-between gap-2">
@@ -778,7 +805,11 @@ function TaskCardInner({
           <p className="text-sm font-medium leading-tight truncate">{task.title}</p>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          {isActive ? (
+          {isStuck ? (
+            <span className="text-[10px] font-medium text-amber-600/90 bg-amber-500/10 border border-amber-500/30 rounded px-1.5 py-0.5">
+              ⚠ Not started
+            </span>
+          ) : isActive ? (
             <span className="text-[10px] font-medium text-primary/80 bg-primary/10 border border-primary/20 rounded px-1.5 py-0.5 animate-pulse">
               Working…
             </span>
@@ -817,6 +848,11 @@ function TaskCardInner({
               <CalendarDays className="h-3 w-3" />
               {new Date(task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
             </span>
+          )}
+          {task.carryOver && !isCron && (
+            <div title="Carries over daily" className="flex items-center text-primary/50">
+              <Repeat className="h-3 w-3" />
+            </div>
           )}
           {hasError && (
             <div className="flex items-center gap-0.5 text-xs text-rose-500/70">
@@ -1019,9 +1055,11 @@ function todayJST(): string {
 }
 
 function offsetDate(dateStr: string, days: number): string {
-  const d = new Date(dateStr + "T00:00:00+09:00");
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  // Use plain UTC arithmetic to avoid timezone-induced day skipping
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
 }
 
 function formatDateLabel(dateStr: string): string {
@@ -1035,8 +1073,112 @@ function formatDateLabel(dateStr: string): string {
   return `${dayName} · ${monthDay}`;
 }
 
+// ── Mini calendar picker ──────────────────────────────────────────────────────
+function MiniCalendar({ value, max, onSelect, onClose }: {
+  value: string; max: string;
+  onSelect: (d: string) => void;
+  onClose: () => void;
+}) {
+  const [view, setView] = useState(() => {
+    const [y, m] = value.split("-").map(Number);
+    return { year: y, month: m }; // 1-indexed month
+  });
+
+  const daysInMonth = (y: number, m: number) => new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const firstDow   = (y: number, m: number) => new Date(Date.UTC(y, m - 1, 1)).getUTCDay(); // 0=Sun
+
+  const prevMonth = () => setView(v => v.month === 1 ? { year: v.year - 1, month: 12 } : { year: v.year, month: v.month - 1 });
+  const nextMonth = () => setView(v => v.month === 12 ? { year: v.year + 1, month: 1 } : { year: v.year, month: v.month + 1 });
+
+  const [maxY, maxM, maxD] = max.split("-").map(Number);
+  const isDisabled = (y: number, m: number, d: number) => {
+    if (y > maxY) return true;
+    if (y === maxY && m > maxM) return true;
+    if (y === maxY && m === maxM && d > maxD) return true;
+    return false;
+  };
+  const toStr = (y: number, m: number, d: number) =>
+    `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+  const { year, month } = view;
+  const totalCells = firstDow(year, month) + daysInMonth(year, month);
+  const rows = Math.ceil(totalCells / 7);
+
+  const monthLabel = new Date(Date.UTC(year, month - 1, 1))
+    .toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+
+  // Close on outside click
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [onClose]);
+
+  return (
+    <div
+      ref={ref}
+      className="absolute top-full left-1/2 -translate-x-1/2 mt-1 z-50 bg-card border border-border rounded-lg shadow-xl p-3 w-64"
+      onMouseDown={e => e.stopPropagation()}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between mb-2">
+        <button onClick={prevMonth} className="rounded p-1 hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors">
+          <ChevronLeft className="h-3.5 w-3.5" />
+        </button>
+        <span className="text-xs font-semibold text-foreground">{monthLabel}</span>
+        <button
+          onClick={nextMonth}
+          disabled={year === maxY && month >= maxM}
+          className="rounded p-1 hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      {/* Day-of-week headers */}
+      <div className="grid grid-cols-7 mb-1">
+        {["Su","Mo","Tu","We","Th","Fr","Sa"].map(d => (
+          <div key={d} className="text-center text-[10px] text-muted-foreground/60 font-medium py-0.5">{d}</div>
+        ))}
+      </div>
+      {/* Day grid */}
+      <div className="grid grid-cols-7">
+        {Array.from({ length: rows * 7 }, (_, i) => {
+          const day = i - firstDow(year, month) + 1;
+          if (day < 1 || day > daysInMonth(year, month)) return <div key={i} />;
+          const dateStr = toStr(year, month, day);
+          const disabled = isDisabled(year, month, day);
+          const selected = dateStr === value;
+          const isTodayCell = dateStr === max;
+          return (
+            <button
+              key={i}
+              disabled={disabled}
+              onClick={() => { onSelect(dateStr); onClose(); }}
+              className={cn(
+                "text-[11px] rounded py-1 transition-colors text-center",
+                selected
+                  ? "bg-primary text-primary-foreground font-semibold"
+                  : isTodayCell
+                    ? "text-primary font-semibold hover:bg-primary/15"
+                    : "text-foreground hover:bg-muted/60",
+                disabled && "opacity-25 cursor-not-allowed hover:bg-transparent"
+              )}
+            >
+              {day}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function TasksPage() {
   const [selectedDate, setSelectedDate] = useState<string>(todayJST());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
   const [cronJobs, setCronJobs] = useState<CronJob[]>([]);
   const [notifications, setNotifications] = useState<{ id: string; type: string; title: string; message: string }[]>([]);
@@ -1188,30 +1330,41 @@ export default function TasksPage() {
     setActiveTask(null);
     setDragStartStatus(null);
     setOverId(null);
-    if (!over) return;
+    if (!over || !startStatus) return;
 
     const activeId = String(active.id);
-    const overId = String(over.id);
+    const overId   = String(over.id);
 
     const draggedTask = tasks.find((t) => t.id === activeId);
     if (!draggedTask || draggedTask.source === "cron") return;
 
-    const overTask = tasks.find((t) => t.id === overId);
-    const newStatus = draggedTask.status;
+    const COLS = ["backlog", "inProgress", "done"] as TaskStatus[];
+
+    // Derive newStatus from the drop target directly (avoids stale-closure bug
+    // where draggedTask.status hasn't been flushed from handleDragOver yet)
+    const columnDrop = COLS.find((c) => c === overId);
+    const overTask   = tasks.find((t) => t.id === overId);
+    // overTask.status is reliable: handleDragOver never changes the *over* task's status
+    const newStatus: TaskStatus = columnDrop ?? overTask?.status ?? startStatus;
+
+    // Sync local state to final status
+    setTasks((prev) => prev.map((t) => t.id === activeId ? { ...t, status: newStatus } : t));
 
     // Reorder within same column
-    if (overTask && startStatus === overTask.status && startStatus === newStatus) {
+    if (newStatus === startStatus && overTask) {
       setTasks((prev) => {
-        const col = prev.filter((t) => t.status === newStatus);
+        const col    = prev.filter((t) => t.status === newStatus);
         const others = prev.filter((t) => t.status !== newStatus);
         const oldIdx = col.findIndex((t) => t.id === activeId);
         const newIdx = col.findIndex((t) => t.id === overId);
+        if (oldIdx === -1 || newIdx === -1) return prev;
         return [...others, ...arrayMove(col, oldIdx, newIdx)];
       });
+      return;
     }
 
     // Persist status change if it moved columns
-    if (startStatus && newStatus && startStatus !== newStatus) {
+    if (newStatus !== startStatus) {
       try {
         await fetch("/api/kanban", {
           method: "PATCH",
@@ -1242,14 +1395,30 @@ export default function TasksPage() {
               >
                 <ChevronLeft className="h-3.5 w-3.5" />
               </button>
-              <span className={cn(
-                "text-xs font-medium px-1.5 py-0.5 rounded",
-                isToday
-                  ? "text-primary/80 bg-primary/8"
-                  : "text-muted-foreground bg-muted/50"
-              )}>
-                {formatDateLabel(selectedDate)}
-              </span>
+              {/* Clickable date label — opens custom calendar */}
+              <div className="relative">
+                <span
+                  onClick={() => setShowDatePicker(v => !v)}
+                  className={cn(
+                    "text-xs font-medium px-1.5 py-0.5 rounded cursor-pointer select-none transition-colors",
+                    isToday
+                      ? "text-primary/80 bg-primary/8 hover:bg-primary/15"
+                      : "text-muted-foreground bg-muted/50 hover:bg-muted/80",
+                    showDatePicker && "ring-1 ring-primary/40"
+                  )}
+                  title="Click to pick a date"
+                >
+                  {formatDateLabel(selectedDate)}
+                </span>
+                {showDatePicker && (
+                  <MiniCalendar
+                    value={selectedDate}
+                    max={todayJST()}
+                    onSelect={setSelectedDate}
+                    onClose={() => setShowDatePicker(false)}
+                  />
+                )}
+              </div>
               <button
                 onClick={() => setSelectedDate((d) => {
                   const next = offsetDate(d, 1);

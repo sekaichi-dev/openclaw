@@ -199,7 +199,7 @@ export function MessageThread({
                     <Badge className="h-3.5 text-[9px] px-1 bg-blue-500/20 text-blue-400 border-0">NEW</Badge>
                   )}
                 </div>
-                <p className="whitespace-pre-wrap leading-relaxed">{message.message}</p>
+                <p className="whitespace-pre-wrap leading-relaxed break-words">{message.message}</p>
               </div>
             </div>
 
@@ -212,7 +212,7 @@ export function MessageThread({
                       <Sparkles className="h-3 w-3 text-primary/70" />
                       <span className="text-xs font-medium text-primary/80">Lisa's suggested reply</span>
                     </div>
-                    <p className="text-xs text-foreground/80 mb-2 whitespace-pre-wrap">{message.suggestedReply}</p>
+                    <p className="text-xs text-foreground/80 mb-2 whitespace-pre-wrap break-words">{message.suggestedReply}</p>
                     <div className="flex gap-1.5">
                       <Button size="sm" className="h-6 text-xs px-2.5"
                         onClick={() => handleQuickReply(message.id, message.suggestedReply!)}>

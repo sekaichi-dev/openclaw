@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+// Removed ScrollArea import - using native scrolling instead
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
@@ -195,8 +195,8 @@ export function ConversationList({
         </select>
       </div>
 
-      {/* Conversation List */}
-      <ScrollArea className="flex-1">
+      {/* Conversation List - Scrollable */}
+      <div className="flex-1 overflow-y-auto min-h-0">
         {loading ? (
           <div className="p-3 space-y-3">
             {[1, 2, 3].map((i) => (
@@ -234,10 +234,10 @@ export function ConversationList({
                         </h4>
                         <Badge 
                           variant="outline" 
-                          className={`text-xs h-7 px-2.5 font-bold border-2 shadow-sm ${getPlatformBadgeColor(conversation.platform)} uppercase`}
+                          className={`text-xs h-7 px-2.5 font-bold border-2 shadow-sm ${getPlatformBadgeColor(conversation.platform)} uppercase flex-shrink-0 whitespace-nowrap overflow-hidden`}
                         >
                           <span className="mr-1">{getPlatformIcon(conversation.platform)}</span>
-                          {conversation.platform}
+                          <span className="truncate">{conversation.platform}</span>
                         </Badge>
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
@@ -253,20 +253,20 @@ export function ConversationList({
                     </div>
                     
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-muted-foreground truncate">
                         {conversation.property}
                       </span>
                     </div>
                     
-                    <p className="text-sm text-muted-foreground line-clamp-2">
+                    <p className="text-sm text-muted-foreground line-clamp-2 break-words">
                       {truncateMessage(conversation.lastMessage)}
                     </p>
                     
                     <div className="flex items-center justify-between mt-2">
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-muted-foreground truncate flex-shrink-0">
                         #{conversation.bookingRef}
                       </span>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-muted-foreground truncate ml-2">
                         {formatDistanceToNow(new Date(conversation.lastMessageTime), { addSuffix: true })}
                       </span>
                     </div>
@@ -276,7 +276,7 @@ export function ConversationList({
             ))}
           </div>
         )}
-      </ScrollArea>
+      </div>
     </div>
   );
 }

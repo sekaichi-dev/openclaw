@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { readdir, readFile, stat } from "fs/promises";
+import { readdir, readFile, writeFile, stat } from "fs/promises";
 import { OPENCLAW_HOME } from "@/lib/constants";
 import path from "path";
 
@@ -86,4 +86,22 @@ export async function GET(request: Request) {
       { status: 404 }
     );
   }
+}
+
+// ── POST — write file content ─────────────────────────────────────────────────
+export async function POST(request: Request) {
+  const { path: filePath, content } = await request.json();
+  if (!filePath || content === undefined) {
+    return NextResponse.json({ error: "path and content required" }, { status: 400 });
+  }
+
+  const fullPath = path.join(OPENCLAW_HOME, filePath);
+  const resolved = path.resolve(fullPath);
+
+  if (!resolved.startsWith(OPENCLAW_HOME)) {
+    return NextResponse.json({ error: "Access denied" }, { status: 403 });
+  }
+
+  await writeFile(resolved, content, "utf-8");
+  return NextResponse.json({ ok: true });
 }

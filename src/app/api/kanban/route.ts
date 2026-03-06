@@ -1,11 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readFile, writeFile } from "fs/promises";
 import path from "path";
-import { execFile } from "child_process";
-import { promisify } from "util";
+import { randomUUID } from "crypto";
 import { OPENCLAW_HOME, OPENCLAW_WORKSPACE } from "@/lib/constants";
 
-const exec = promisify(execFile);
+// Write a one-shot "at" cron job directly to jobs.json — avoids the CLI which
+// requires a gateway token the Next.js subprocess doesn't have.
+async function scheduleOneShot({
+  name, agentId, sessionKey, message, model, timeoutSeconds, delayMs = 60000,
+}: {
+  name: string; agentId: string; sessionKey: string;
+  message: string; model: string; timeoutSeconds: number; delayMs?: number;
+}): Promise<string> {
+  const jobsPath = path.join(OPENCLAW_HOME, "cron", "jobs.json");
+  const raw  = await readFile(jobsPath, "utf-8");
+  const data = JSON.parse(raw);
+  const jobs: any[] = Array.isArray(data) ? data : (data.jobs ?? []);
+
+  const id       = randomUUID();
+  const fireAtMs = Date.now() + delayMs;
+  const newJob   = {
+    id, agentId, sessionKey,
+    name, enabled: true, deleteAfterRun: true,
+    createdAtMs: Date.now(), updatedAtMs: Date.now(),
+    schedule: { kind: "at", at: new Date(fireAtMs).toISOString() },
+    sessionTarget: "isolated",
+    wakeMode: "now",
+    payload: { kind: "agentTurn", message, model, timeoutSeconds },
+    delivery: { mode: "none" },
+    state: { nextRunAtMs: fireAtMs },
+  };
+  jobs.push(newJob);
+  const updated = Array.isArray(data) ? jobs : { ...data, jobs };
+  await writeFile(jobsPath, JSON.stringify(updated, null, 2));
+  return id;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +65,8 @@ export interface KanbanTask {
   tags?: string[];
   createdAt?: string;
   updatedAt?: string;
+  completedAt?: string;
+  carryOver?: boolean;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -177,7 +208,48 @@ export async function GET(req: NextRequest) {
   );
 
   // Load manual tasks
-  const manualTasks = await readManualTasks();
+  const allManualTasks = await readManualTasks();
+
+  // Prune done tasks older than 7 days from the file to keep it clean
+  const sevenDaysAgo = startOfToday - 6 * 86400000;
+  const pruned = allManualTasks.filter((t) => {
+    if (t.status !== "done") return true;
+    const ts = t.completedAt
+      ? new Date(t.completedAt).getTime()
+      : t.updatedAt ? new Date(t.updatedAt).getTime() : 0;
+    return ts >= sevenDaysAgo;
+  });
+  if (pruned.length !== allManualTasks.length) {
+    await writeManualTasks(pruned);
+  }
+
+  // Requested date as YYYY-MM-DD JST string
+  const requestedDateStr = new Date(now + TZ_OFFSET_MS).toISOString().slice(0, 10);
+  const isViewingToday   = !dateParam;
+
+  const manualTasks = pruned.filter((t) => {
+    // Derive JST date strings
+    const createdDateStr = t.createdAt
+      ? new Date(new Date(t.createdAt).getTime() + TZ_OFFSET_MS).toISOString().slice(0, 10)
+      : requestedDateStr;
+
+    if (t.status === "done") {
+      // Done tasks: only appear on the day they were completed
+      const completedTs = t.completedAt
+        ? new Date(t.completedAt).getTime()
+        : t.updatedAt ? new Date(t.updatedAt).getTime() : 0;
+      const completedDateStr = new Date(completedTs + TZ_OFFSET_MS).toISOString().slice(0, 10);
+      return completedDateStr === requestedDateStr;
+    }
+
+    // Today view: show all active (non-done) tasks so nothing gets lost
+    if (isViewingToday) return true;
+
+    // Historical view: only show if created on this date, or explicitly carried over
+    if (createdDateStr === requestedDateStr) return true;
+    if (t.carryOver && createdDateStr < requestedDateStr) return true;
+    return false;
+  });
 
   return NextResponse.json({ tasks: [...cronTasks, ...manualTasks] });
 }
@@ -245,6 +317,10 @@ export async function PATCH(req: NextRequest) {
   if (assignee !== undefined) tasks[idx].assignee = assignee;
   if (prompt !== undefined) tasks[idx].prompt = prompt;
   tasks[idx].updatedAt = new Date().toISOString();
+  // Record when a task is first completed so the daily-reset filter works correctly
+  if (status === "done" && prevStatus !== "done" && !tasks[idx].completedAt) {
+    tasks[idx].completedAt = new Date().toISOString();
+  }
   Object.assign(tasks[idx], rest);
 
   await writeManualTasks(tasks);
@@ -292,35 +368,23 @@ For Claude Code: stream the output, report key milestones. When it finishes, con
 ## Original Task Prompt
 ${taskPrompt}`;
 
-    // Fire-and-forget one-shot cron job for Jennie (isolated session so it doesn't conflict with main)
-    exec("/opt/homebrew/bin/openclaw", [
-      "cron", "add",
-      "--at", "1m",
-      "--agent", "jennie",
-      "--session", "isolated",
-      "--no-deliver",
-      "--name", `Task: ${task.title}`,
-      "--message", jennieMessage,
-      "--delete-after-run",
-      "--timeout-seconds", "300",
-      "--model", "anthropic/claude-sonnet-4-20250514",
-      "--json",
-    ]).then(async ({ stdout }) => {
-      // Store the triggered job id on the task so UI can track it
-      try {
-        const json = JSON.parse(stdout);
-        const jobId = json?.id;
-        if (jobId) {
-          const current = await readManualTasks();
-          const i = current.findIndex((t) => t.id === task.id);
-          if (i !== -1) {
-            (current[i] as any).activeJobId = jobId;
-            (current[i] as any).activeJobStartedAt = new Date().toISOString();
-            await writeManualTasks(current);
-          }
-        }
-      } catch {}
-    }).catch(() => {/* best effort */});
+    // Write the triage job directly to jobs.json (no CLI/gateway needed)
+    scheduleOneShot({
+      name: `Task: ${task.title}`,
+      agentId: "jennie",
+      sessionKey: "agent:jennie:cron:triage",
+      message: jennieMessage,
+      model: "anthropic/claude-sonnet-4-20250514",
+      timeoutSeconds: 300,
+    }).then(async (jobId) => {
+      const current = await readManualTasks();
+      const i = current.findIndex((t) => t.id === task.id);
+      if (i !== -1) {
+        (current[i] as any).activeJobId = jobId;
+        (current[i] as any).activeJobStartedAt = new Date().toISOString();
+        await writeManualTasks(current);
+      }
+    }).catch((e) => console.error("[kanban] triage schedule error:", e.message));
   }
 
   // Trigger QA review when task moves to done (1 round only — no infinite loops)
@@ -383,28 +447,22 @@ Original task: ${task.description || task.title}
 
 Fix ONLY the issues in the critique. When done, set status=done and qaFinalCheck=true in ${OPENCLAW_WORKSPACE}/kanban-manual.json (id: ${task.id})."`;
 
-      exec("/opt/homebrew/bin/openclaw", [
-        "cron", "add", "--at", "1m",
-        "--agent", "jennie", "--session", "isolated", "--no-deliver",
-        "--name", isFinalCheck ? `Final QA: ${task.title}` : `QA: ${task.title}`,
-        "--message", qaMessage,
-        "--delete-after-run", "--timeout-seconds", "180",
-        "--model", "anthropic/claude-sonnet-4-20250514", "--json",
-      ]).then(async ({ stdout }) => {
-        try {
-          const json = JSON.parse(stdout);
-          const jobId = json?.id;
-          if (jobId) {
-            const current = await readManualTasks();
-            const i = current.findIndex((t) => t.id === task.id);
-            if (i !== -1) {
-              (current[i] as any).qaJobId = jobId;
-              (current[i] as any).qaStartedAt = new Date().toISOString();
-              await writeManualTasks(current);
-            }
-          }
-        } catch {}
-      }).catch(() => {});
+      scheduleOneShot({
+        name: isFinalCheck ? `Final QA: ${task.title}` : `QA: ${task.title}`,
+        agentId: "jennie",
+        sessionKey: "agent:jennie:cron:qa",
+        message: qaMessage,
+        model: "anthropic/claude-sonnet-4-20250514",
+        timeoutSeconds: 180,
+      }).then(async (jobId) => {
+        const current = await readManualTasks();
+        const i = current.findIndex((t) => t.id === task.id);
+        if (i !== -1) {
+          (current[i] as any).qaJobId = jobId;
+          (current[i] as any).qaStartedAt = new Date().toISOString();
+          await writeManualTasks(current);
+        }
+      }).catch((e) => console.error("[kanban] qa schedule error:", e.message));
     }
   }
 
