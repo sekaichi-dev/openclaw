@@ -224,7 +224,13 @@ export function ActivityFeedCard({ className }: { className?: string }) {
                       </p>
                       <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                         <span>
-                          {new Date(entry.timestamp).toLocaleTimeString()}
+                          {(() => {
+                            const date = new Date(entry.timestamp);
+                            const isToday = date.toDateString() === new Date().toDateString();
+                            return isToday 
+                              ? date.toLocaleTimeString()
+                              : `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+                          })()}
                         </span>
                         {(entry.type || entry.sessionType) && (
                           <Badge
