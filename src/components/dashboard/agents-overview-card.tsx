@@ -39,16 +39,23 @@ function InlineFileEditor({ filePath }: { filePath: string }) {
   }, [open, filePath]);
 
   const save = async () => {
+    if (!isDirty || saving) return;
     setSaving(true);
-    await fetch("/api/files", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path: filePath, content }),
-    });
-    setSaving(false);
-    setOriginal(content);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    try {
+      await fetch("/api/files", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: filePath, content }),
+      });
+      setOriginal(content);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (error) {
+      console.error("Failed to save file:", error);
+      // TODO: Add error toast notification
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

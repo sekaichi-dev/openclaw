@@ -521,7 +521,6 @@ export function VirtualOffice() {
 
   // ── Derive task blurbs ──────────────────────────────────────────────────────
   const tasks = kanbanData?.tasks ?? [];
-  // Only show a bubble when there's a real task being worked on — no generic fallbacks
   const agentBlurbs: (string | null)[] = AGENTS.map((a, i) => {
     if (!agentActive[i]) return null;
     const task = tasks.find(t =>
@@ -530,6 +529,12 @@ export function VirtualOffice() {
       t.source === "manual" // only manual tasks represent real delegated work
     );
     if (task) return task.title?.trim() || task.description?.slice(0, 30) || null;
+    
+    // Show default activity for Lisa when active but no specific task
+    if (a.name === "Lisa" && agentActive[i]) {
+      return "👀 Monitoring guests…";
+    }
+    
     return null;
   });
 
