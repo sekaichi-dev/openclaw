@@ -18,7 +18,8 @@ import { Timer, ChevronDown, ChevronRight } from "lucide-react";
 interface CronJob {
   id?: string;
   name: string;
-  schedule: string | { kind?: string; expr?: string; tz?: string };
+  agentId?: string;
+  schedule: string | { kind?: string; expr?: string; tz?: string; everyMs?: number; anchorMs?: number };
   scheduleHuman?: string;
   nextRun?: string;
   lastRun?: string;
@@ -38,19 +39,39 @@ interface CronJob {
 
 const FILTERS = ["All", "Daily", "Weekly", "Monthly"] as const;
 
+function formatEveryMs(ms: number): string {
+  if (ms < 60000) return `every ${ms / 1000}s`;
+  if (ms < 3600000) return `every ${ms / 60000}m`;
+  if (ms < 86400000) return `every ${ms / 3600000}h`;
+  return `every ${ms / 86400000}d`;
+}
+
 function getScheduleDisplay(job: CronJob): string {
   if (job.scheduleHuman) return job.scheduleHuman;
-  if (typeof job.schedule === "object" && job.schedule.expr) {
-    return `${job.schedule.expr}${job.schedule.tz ? ` (${job.schedule.tz})` : ""}`;
+  if (typeof job.schedule === "object") {
+    const s = job.schedule;
+    if (s.kind === "every" && s.everyMs != null) {
+      return formatEveryMs(s.everyMs);
+    }
+    if (s.expr) {
+      return `${s.expr}${s.tz ? ` (${s.tz})` : ""}`;
+    }
+    return JSON.stringify(s);
   }
   return String(job.schedule);
 }
 
 function getFrequency(job: CronJob): string {
-  const expr =
-    typeof job.schedule === "object" ? job.schedule.expr || "" : String(job.schedule);
   if (job.frequency) return job.frequency.toLowerCase();
-  // Simple heuristic from cron expression
+  if (typeof job.schedule === "object") {
+    const s = job.schedule;
+    if (s.kind === "every") return "daily"; // treat interval as daily-ish for filter
+    const expr = s.expr || "";
+    if (expr.includes("* * *")) return "daily";
+    if (expr.includes("* *") && !expr.includes("* * *")) return "weekly";
+    return "daily";
+  }
+  const expr = String(job.schedule);
   if (expr.includes("* * *")) return "daily";
   if (expr.includes("* *") && !expr.includes("* * *")) return "weekly";
   return "daily";
