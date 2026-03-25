@@ -34,6 +34,7 @@ interface CronJob {
     lastStatus?: string;
     lastDurationMs?: number;
     consecutiveErrors?: number;
+    runningAtMs?: number;
   };
 }
 
@@ -188,7 +189,12 @@ export function CronJobsCard() {
                   : job.lastRun
                     ? new Date(job.lastRun).toLocaleString()
                     : "—";
-                const status = job.state?.lastStatus || job.lastStatus;
+                const isRunning =
+                  job.state?.runningAtMs != null &&
+                  Date.now() - job.state.runningAtMs < 10 * 60 * 1000;
+                const status = isRunning
+                  ? "running"
+                  : job.state?.lastStatus || job.lastStatus;
 
                 return (
                   <Fragment key={key}>
