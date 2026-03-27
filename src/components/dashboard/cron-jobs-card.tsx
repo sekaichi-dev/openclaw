@@ -78,6 +78,20 @@ function getFrequency(job: CronJob): string {
   return "daily";
 }
 
+function formatRelative(ms: number | undefined): { short: string; full: string } {
+  if (ms == null) return { short: "—", full: "—" };
+  const diff = ms - Date.now();
+  const abs = Math.abs(diff);
+  const past = diff < 0;
+  let short: string;
+  if (abs < 60_000) short = past ? "just now" : "in <1m";
+  else if (abs < 3_600_000) short = `${past ? "" : "in "}${Math.round(abs / 60_000)}m${past ? " ago" : ""}`;
+  else if (abs < 86_400_000) short = `${past ? "" : "in "}${Math.round(abs / 3_600_000)}h${past ? " ago" : ""}`;
+  else short = `${past ? "" : "in "}${Math.round(abs / 86_400_000)}d${past ? " ago" : ""}`;
+  const full = new Date(ms).toLocaleString();
+  return { short, full };
+}
+
 export function CronJobsCard() {
   const { data: jobs, loading } = usePolling<CronJob[]>("/api/cron");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
@@ -179,16 +193,10 @@ export function CronJobsCard() {
               {filteredJobs.map((job) => {
                 const key = job.id || job.name;
                 const isExpanded = expandedJob === key;
-                const nextRun = job.state?.nextRunAtMs
-                  ? new Date(job.state.nextRunAtMs).toLocaleString()
-                  : job.nextRun
-                    ? new Date(job.nextRun).toLocaleString()
-                    : "—";
-                const lastRun = job.state?.lastRunAtMs
-                  ? new Date(job.state.lastRunAtMs).toLocaleString()
-                  : job.lastRun
-                    ? new Date(job.lastRun).toLocaleString()
-                    : "—";
+                const nextRunMs = job.state?.nextRunAtMs ?? (job.nextRun ? new Date(job.nextRun).getTime() : undefined);
+                const lastRunMs = job.state?.lastRunAtMs ?? (job.lastRun ? new Date(job.lastRun).getTime() : undefined);
+                const { short: nextRunShort, full: nextRunFull } = formatRelative(nextRunMs);
+                const { short: lastRunShort, full: lastRunFull } = formatRelative(lastRunMs);
                 const isRunning =
                   job.state?.runningAtMs != null &&
                   Date.now() - job.state.runningAtMs < 10 * 60 * 1000;
@@ -215,13 +223,13 @@ export function CronJobsCard() {
                         </div>
                       </TableCell>
                       <TableCell className="text-xs w-[110px] overflow-hidden">
-                        <div className="truncate" title={nextRun}>
-                          {nextRun}
+                        <div className="truncate" title={nextRunFull}>
+                          {nextRunShort}
                         </div>
                       </TableCell>
                       <TableCell className="text-xs w-[110px] overflow-hidden">
-                        <div className="truncate" title={lastRun}>
-                          {lastRun}
+                        <div className="truncate" title={lastRunFull}>
+                          {lastRunShort}
                         </div>
                       </TableCell>
                       <TableCell className="w-[80px]">{getStatusBadge(status)}</TableCell>
@@ -246,6 +254,16 @@ export function CronJobsCard() {
                             <div className="font-mono text-xs break-all">
                               <strong>Schedule:</strong> {getScheduleDisplay(job)}
                             </div>
+                            {nextRunMs != null && (
+                              <p className="text-xs text-muted-foreground">
+                                Next run: {nextRunFull}
+                              </p>
+                            )}
+                            {lastRunMs != null && (
+                              <p className="text-xs text-muted-foreground">
+                                Last run: {lastRunFull}
+                              </p>
+                            )}
                             {job.state?.lastDurationMs != null && (
                               <p className="text-xs text-muted-foreground">
                                 Last duration: {(job.state.lastDurationMs / 1000).toFixed(1)}s
